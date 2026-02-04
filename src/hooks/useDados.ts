@@ -25,8 +25,8 @@ const validarEmprestimo = (emp: Partial<Emprestimo>): Emprestimo | null => {
     id: emp.id,
     clienteNome: emp.clienteNome || 'Cliente',
     valorSolicitado: emp.valorSolicitado || 0,
-    taxaJuros: emp.taxaJuros ?? 0.10,
-    valorTotal: emp.valorTotal || (emp.valorSolicitado || 0) * 1.1,
+    taxaJuros: emp.taxaJuros ?? 0.20,
+    valorTotal: emp.valorTotal || (emp.valorSolicitado || 0) * 1.2,
     dataEmprestimo: emp.dataEmprestimo || new Date().toISOString().split('T')[0],
     dataVencimento: emp.dataVencimento || new Date().toISOString().split('T')[0],
     status: emp.status || 'pendente',
@@ -214,7 +214,7 @@ export function useDados() {
   // EMPRESTIMOS
   const adicionarEmprestimo = (dados: Omit<Emprestimo, 'id' | 'criadoEm' | 'pagamento' | 'taxaJuros' | 'valorTotal'>) => {
     const id = gerarId();
-    const taxaJuros = 0.10; // 10%
+    const taxaJuros = 0.20; // 20%
     const valorTotal = dados.valorSolicitado * (1 + taxaJuros);
     
     // Pagamento inicial zerado

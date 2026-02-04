@@ -83,7 +83,7 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
                   <TableHead>Data Empr.</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead className="text-right">Valor Orig.</TableHead>
-                  <TableHead className="text-right">Total (+10%)</TableHead>
+                  <TableHead className="text-right">Total (+20%)</TableHead>
                   <TableHead className="text-right">Falta Pagar</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -146,7 +146,7 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
           <DialogHeader>
             <DialogTitle>Novo Empréstimo</DialogTitle>
             <DialogDescription>
-              Registre um novo empréstimo com taxa de 10% de juros.
+              Registre um novo empréstimo com taxa de 20% de juros.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,9 +175,9 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
                 </div>
               </div>
               <div className="bg-blue-50 p-2 rounded border border-blue-100 flex flex-col justify-center">
-                <span className="text-xs text-blue-600">Valor Final (Com 10%)</span>
+                <span className="text-xs text-blue-600">Valor Final (Com 20%)</span>
                 <span className="font-bold text-blue-800 text-lg">
-                  {novoEmprestimo.valorSolicitado ? formatarMoeda(parseFloat(novoEmprestimo.valorSolicitado) * 1.1) : 'R$ 0,00'}
+                  {novoEmprestimo.valorSolicitado ? formatarMoeda(parseFloat(novoEmprestimo.valorSolicitado) * 1.2) : 'R$ 0,00'}
                 </span>
               </div>
             </div>
