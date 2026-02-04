@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -138,14 +138,17 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                 </SelectContent>
               </Select>
             </div>
-            <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-              <DialogTrigger asChild>
-                <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto min-h-[44px]">
-                  <Plus className="h-4 w-4 mr-2 shrink-0" />
-                  Novo Produto
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+            <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto min-h-[44px]">
+              <Plus className="h-4 w-4 mr-2 shrink-0" />
+              Novo Produto
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Produto */}
+      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                   <DialogTitle>{produtoEditando ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
                 </DialogHeader>
@@ -272,9 +275,6 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                 </form>
               </DialogContent>
             </Dialog>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Lista de Produtos */}
       <Card>
