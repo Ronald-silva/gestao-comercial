@@ -73,3 +73,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Scroll suave em overflow no mobile (touch) */
+@layer utilities {
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}

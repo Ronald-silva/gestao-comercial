@@ -96,23 +96,23 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header com Filtros */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 w-full">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 shrink-0" />
                 <Input
                   placeholder="Buscar vendas..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
               <Select value={statusFiltro} onValueChange={setStatusFiltro}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -123,8 +123,8 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleNovo} className="bg-green-600 hover:bg-green-700">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleNovo} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto min-h-[44px]">
+              <Plus className="h-4 w-4 mr-2 shrink-0" />
               Nova Venda
             </Button>
           </div>
@@ -133,7 +133,7 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
 
       {/* Modal Nova Venda */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Registrar Nova Venda</DialogTitle>
           </DialogHeader>
@@ -326,7 +326,7 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
 
       {/* Modal Detalhes */}
       <Dialog open={!!modalDetalhes} onOpenChange={() => setModalDetalhes(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Detalhes da Venda</DialogTitle>
           </DialogHeader>
@@ -463,17 +463,17 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
               <p className="text-sm text-gray-400 mt-1">Registre sua primeira venda para começar</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto scroll-touch -mx-4 sm:mx-0">
+              <Table className="min-w-[640px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Forma</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Data</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Cliente</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Produto</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Valor</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Forma</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -483,34 +483,34 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
                     
                     return (
                       <TableRow key={venda.id} className="hover:bg-gray-50">
-                        <TableCell className="text-sm">{formatarData(venda.dataVenda)}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-gray-900">{venda.clienteNome}</p>
+                        <TableCell className="text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">{formatarData(venda.dataVenda)}</TableCell>
+                        <TableCell className="px-2 sm:px-4 max-w-[100px] sm:max-w-none">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{venda.clienteNome}</p>
                             {venda.clienteContato && (
-                              <p className="text-xs text-gray-500">{venda.clienteContato}</p>
+                              <p className="text-xs text-gray-500 truncate">{venda.clienteContato}</p>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell px-2 sm:px-4">
                           <p className="text-sm">{venda.produtoNome}</p>
                           <p className="text-xs text-gray-500">{venda.quantidade}x {formatarMoeda(venda.precoUnitario)}</p>
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
                           {formatarMoeda(venda.valorTotal)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell px-2 sm:px-4">
                           <Badge className={`${forma.cor} text-white text-xs`}>
                             {forma.icone} {forma.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.cor.replace('bg-', 'bg-opacity-20 bg-')} ${status.textoCor}`}>
+                        <TableCell className="px-2 sm:px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${status.cor.replace('bg-', 'bg-opacity-20 bg-')} ${status.textoCor}`}>
                             {status.label}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                        <TableCell className="text-right px-2 sm:px-4">
+                          <div className="flex justify-end gap-1 sm:gap-2">
                             <Button
                               variant="ghost"
                               size="sm"

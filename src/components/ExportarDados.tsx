@@ -148,14 +148,14 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
   };
 
   return (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" onClick={exportarExcel} className="text-green-700 border-green-300 hover:bg-green-50">
-        <FileSpreadsheet className="h-4 w-4 mr-2" />
-        Excel
+    <div className="flex gap-1 sm:gap-2">
+      <Button variant="outline" size="sm" onClick={exportarExcel} className="text-green-700 border-green-300 hover:bg-green-50 min-h-[44px] px-2 sm:px-3" title="Exportar Excel">
+        <FileSpreadsheet className="h-4 w-4 sm:mr-2 shrink-0" />
+        <span className="hidden sm:inline">Excel</span>
       </Button>
-      <Button variant="outline" size="sm" onClick={exportarCSV} className="text-blue-700 border-blue-300 hover:bg-blue-50">
-        <FileText className="h-4 w-4 mr-2" />
-        CSV
+      <Button variant="outline" size="sm" onClick={exportarCSV} className="text-blue-700 border-blue-300 hover:bg-blue-50 min-h-[44px] px-2 sm:px-3" title="Exportar CSV">
+        <FileText className="h-4 w-4 sm:mr-2 shrink-0" />
+        <span className="hidden sm:inline">CSV</span>
       </Button>
     </div>
   );

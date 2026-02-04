@@ -61,23 +61,23 @@ function App() {
   const contasAReceber = getContasAReceber();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Toaster position="top-right" richColors />
+    <div className="min-h-screen bg-gray-100 min-h-[100dvh]">
+      <Toaster position="top-center" richColors />
       
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <Receipt className="h-6 w-6" />
+      {/* Header - compacto no mobile */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-10 safe-area-inset-top">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16 gap-2 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg shrink-0">
+                <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Gestão de Vendas Pro</h1>
-                <p className="text-xs text-gray-500">Sistema de controle comercial</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">Gestão de Vendas Pro</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Sistema de controle comercial</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <ExportarDados produtos={produtos} vendas={vendas} />
               <div className="text-right hidden sm:block">
                 <p className="text-sm text-gray-500">Total em Vendas</p>
@@ -95,8 +95,8 @@ function App() {
 
       {/* Alertas */}
       {(produtosEstoqueBaixo.length > 0 || contasAReceber.length > 0) && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <AlertaEstoque produtos={produtos} />
             <LembretesContas vendas={vendas} onRegistrarPagamento={handleRegistrarPagamento} />
           </div>
@@ -104,23 +104,23 @@ function App() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full bg-white p-1 rounded-xl shadow-sm">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-              <LayoutDashboard className="h-4 w-4" />
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4 sm:space-y-6">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-white p-1.5 sm:p-1 rounded-xl shadow-sm h-auto gap-1">
+            <TabsTrigger value="dashboard" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 min-h-[44px]">
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="produtos" className="flex items-center gap-2 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700">
-              <Package className="h-4 w-4" />
+            <TabsTrigger value="produtos" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 min-h-[44px]">
+              <Package className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Produtos</span>
             </TabsTrigger>
-            <TabsTrigger value="vendas" className="flex items-center gap-2 data-[state=active]:bg-green-100 data-[state=active]:text-green-700">
-              <ShoppingCart className="h-4 w-4" />
+            <TabsTrigger value="vendas" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-green-100 data-[state=active]:text-green-700 min-h-[44px]">
+              <ShoppingCart className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Vendas</span>
             </TabsTrigger>
-            <TabsTrigger value="relatorios" className="flex items-center gap-2 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700">
-              <BarChart3 className="h-4 w-4" />
+            <TabsTrigger value="relatorios" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 min-h-[44px]">
+              <BarChart3 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Relatórios</span>
             </TabsTrigger>
           </TabsList>
@@ -163,13 +163,13 @@ function App() {
       />
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-500">
+      <footer className="bg-white border-t mt-8 sm:mt-12">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 text-center md:text-left">
+            <p className="text-xs sm:text-sm text-gray-500">
               © 2024 Gestão de Vendas Pro. Seu negócio em crescimento.
             </p>
-            <div className="flex gap-6 text-sm text-gray-500">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                 <span>{produtos.length} produtos</span>

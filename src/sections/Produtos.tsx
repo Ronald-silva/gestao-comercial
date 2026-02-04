@@ -114,20 +114,20 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
     <div className="space-y-6">
       {/* Header com Filtros */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 w-full">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 shrink-0" />
                 <Input
                   placeholder="Buscar produtos..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
               <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -140,12 +140,12 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
             </div>
             <Dialog open={modalAberto} onOpenChange={setModalAberto}>
               <DialogTrigger asChild>
-                <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto min-h-[44px]">
+                  <Plus className="h-4 w-4 mr-2 shrink-0" />
                   Novo Produto
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                   <DialogTitle>{produtoEditando ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
                 </DialogHeader>
@@ -292,18 +292,18 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
               <p className="text-sm text-gray-400 mt-1">Cadastre seu primeiro produto para começar</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto scroll-touch -mx-4 sm:mx-0">
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Custo</TableHead>
-                    <TableHead className="text-right">Venda</TableHead>
-                    <TableHead className="text-right">Lucro</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Produto</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Categoria</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Custo</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Venda</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Lucro</TableHead>
+                    <TableHead className="text-center px-2 sm:px-4 text-xs sm:text-sm">Qtd</TableHead>
+                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Data</TableHead>
+                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -313,43 +313,43 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                     
                     return (
                       <TableRow key={produto.id} className="hover:bg-gray-50">
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-gray-900">{produto.nome}</p>
+                        <TableCell className="px-2 sm:px-4 min-w-0">
+                          <div className="max-w-[120px] sm:max-w-[200px]">
+                            <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{produto.nome}</p>
                             {produto.descricao && (
-                              <p className="text-xs text-gray-500 truncate max-w-[200px]">{produto.descricao}</p>
+                              <p className="text-xs text-gray-500 truncate">{produto.descricao}</p>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge className={`${categoria.cor} text-white`}>
+                        <TableCell className="hidden sm:table-cell px-2 sm:px-4">
+                          <Badge className={`${categoria.cor} text-white text-xs`}>
                             {categoria.icone} {categoria.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right text-gray-600">
+                        <TableCell className="text-right text-gray-600 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
                           {formatarMoeda(produto.precoCusto)}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right font-medium text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
                           {formatarMoeda(produto.precoVenda)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <span className="text-green-600 font-medium">
+                        <TableCell className="text-right hidden md:table-cell px-2 sm:px-4">
+                          <span className="text-green-600 font-medium text-sm">
                             {formatarMoeda(lucro)}
                           </span>
                           <span className="text-xs text-gray-500 block">
                             {margem.toFixed(1)}%
                           </span>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full text-sm font-medium">
+                        <TableCell className="text-center px-2 sm:px-4">
+                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 rounded-full text-xs sm:text-sm font-medium">
                             {produto.quantidade}
                           </span>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-500">
+                        <TableCell className="text-xs sm:text-sm text-gray-500 hidden md:table-cell px-2 sm:px-4 whitespace-nowrap">
                           {formatarData(produto.dataCompra)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                        <TableCell className="text-right px-2 sm:px-4">
+                          <div className="flex justify-end gap-1 sm:gap-2">
                             <Button
                               variant="ghost"
                               size="sm"

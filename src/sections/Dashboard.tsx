@@ -198,19 +198,19 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {cards.map((card, index) => (
           <Card key={index} className="border-l-4 border-l-transparent hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">{card.titulo}</CardTitle>
-              <div className={`p-2 rounded-lg ${card.bgCor}`}>
-                <card.icone className={`h-5 w-5 ${card.cor}`} />
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-4 py-3 sm:px-6 sm:py-4">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">{card.titulo}</CardTitle>
+              <div className={`p-1.5 sm:p-2 rounded-lg ${card.bgCor}`}>
+                <card.icone className={`h-4 w-4 sm:h-5 sm:w-5 ${card.cor}`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{card.valor}</div>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
+              <div className="text-lg sm:text-2xl font-bold text-gray-900">{card.valor}</div>
               {card.subvalor && (
                 <p className="text-xs text-gray-500 mt-1">{card.subvalor}</p>
               )}
@@ -220,31 +220,31 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
       </div>
 
       {/* Cards por Período */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {cardsPeriodo.map((card, index) => (
           <Card key={index} className="bg-gradient-to-br from-gray-50 to-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Vendas {card.titulo}</CardTitle>
+            <CardHeader className="pb-1 sm:pb-2 px-4 py-3 sm:px-6 sm:py-4">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Vendas {card.titulo}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-gray-900">{card.valor}</div>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
+              <div className="text-base sm:text-xl font-bold text-gray-900">{card.valor}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Gráfico de Evolução */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
               Evolução de Vendas (7 dias)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
               <LineChart data={dados.evolucaoVendas}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
@@ -268,14 +268,14 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
         {/* Gráfico de Vendas por Categoria */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 shrink-0" />
               Vendas por Categoria
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={dados.vendasPorCategoria}
@@ -299,14 +299,14 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
         {/* Gráfico de Status de Pagamento */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0" />
               Status de Pagamento
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dados.statusPagamento} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis type="number" tickFormatter={(v) => `R$${v/1000}k`} />
@@ -324,14 +324,14 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
         {/* Gráfico de Formas de Pagamento */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-orange-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 shrink-0" />
               Formas de Pagamento
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dados.pagamentosPorForma}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -344,33 +344,33 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Produtos Mais Vendidos */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
               Produtos Mais Rentáveis
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {dados.produtosMaisVendidos.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nenhuma venda registrada ainda</p>
+              <p className="text-gray-500 text-center py-4 text-sm">Nenhuma venda registrada ainda</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {dados.produtosMaisVendidos.map((produto, index) => (
-                  <div key={produto.produtoId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full">
+                  <div key={produto.produtoId} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 bg-blue-600 text-white text-xs font-bold rounded-full shrink-0">
                         {index + 1}
                       </span>
-                      <div>
-                        <p className="font-medium text-gray-900">{produto.produtoNome}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{produto.produtoNome}</p>
                         <p className="text-xs text-gray-500">{produto.quantidadeVendida} vendidos</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-green-600">{formatarMoeda(produto.lucroTotal)}</p>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-green-600 text-sm sm:text-base">{formatarMoeda(produto.lucroTotal)}</p>
                       <p className="text-xs text-gray-500">{produto.margemLucro.toFixed(1)}% margem</p>
                     </div>
                   </div>
@@ -382,25 +382,25 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
         {/* Pagamentos Pendentes */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 shrink-0" />
               Pagamentos Pendentes
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {dados.pagamentosPendentes.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nenhum pagamento pendente!</p>
+              <p className="text-gray-500 text-center py-4 text-sm">Nenhum pagamento pendente!</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {dados.pagamentosPendentes.map((venda) => (
-                  <div key={venda.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
-                    <div>
-                      <p className="font-medium text-gray-900">{venda.clienteNome}</p>
-                      <p className="text-xs text-gray-500">{venda.produtoNome}</p>
+                  <div key={venda.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-orange-50 rounded-lg border border-orange-100 gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{venda.clienteNome}</p>
+                      <p className="text-xs text-gray-500 truncate">{venda.produtoNome}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-orange-600">
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-orange-600 text-sm sm:text-base">
                         {formatarMoeda(venda.pagamento.valorTotal - venda.pagamento.valorRecebido)}
                       </p>
                       <p className="text-xs text-gray-500">{formatarData(venda.dataVenda)}</p>
@@ -413,38 +413,38 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
         </Card>
       </div>
 
-      {/* Vendas Recentes */}
+      {/* Vendas Recentes - scroll horizontal no mobile */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-purple-600" />
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 shrink-0" />
             Vendas Recentes
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 sm:px-6 sm:pb-6 pb-4">
           {dados.vendasRecentes.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">Nenhuma venda registrada ainda</p>
+            <p className="text-gray-500 text-center py-4 text-sm px-4">Nenhuma venda registrada ainda</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto scroll-touch -mx-4 sm:mx-0 px-4 sm:px-0">
+              <table className="w-full min-w-[520px]">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-600">Data</th>
-                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-600">Cliente</th>
-                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-600">Produto</th>
-                    <th className="text-right py-2 px-4 text-sm font-medium text-gray-600">Valor</th>
-                    <th className="text-center py-2 px-4 text-sm font-medium text-gray-600">Status</th>
+                    <th className="text-left py-2 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-600">Data</th>
+                    <th className="text-left py-2 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-600">Cliente</th>
+                    <th className="text-left py-2 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-600">Produto</th>
+                    <th className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-600">Valor</th>
+                    <th className="text-center py-2 px-2 sm:px-4 text-xs sm:text-sm font-medium text-gray-600">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dados.vendasRecentes.map((venda) => (
                     <tr key={venda.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm">{formatarData(venda.dataVenda)}</td>
-                      <td className="py-3 px-4 text-sm font-medium">{venda.clienteNome}</td>
-                      <td className="py-3 px-4 text-sm">{venda.produtoNome}</td>
-                      <td className="py-3 px-4 text-sm text-right font-semibold">{formatarMoeda(venda.valorTotal)}</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm whitespace-nowrap">{formatarData(venda.dataVenda)}</td>
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium max-w-[100px] sm:max-w-none truncate">{venda.clienteNome}</td>
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm max-w-[80px] sm:max-w-none truncate">{venda.produtoNome}</td>
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm text-right font-semibold whitespace-nowrap">{formatarMoeda(venda.valorTotal)}</td>
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                           venda.pagamento.status === 'pago' 
                             ? 'bg-green-100 text-green-700' 
                             : venda.pagamento.status === 'parcial'
