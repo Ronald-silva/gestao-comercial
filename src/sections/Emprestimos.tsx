@@ -98,8 +98,8 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
                   </TableRow>
                 ) : (
                   emprestimos.map((emp) => {
-                    const restante = emp.valorTotal - emp.pagamento.valorRecebido;
-                    const atrasado = emp.status !== 'pago' && new Date(emp.dataVencimento) < new Date();
+                    const restante = (emp?.valorTotal || 0) - (emp?.pagamento?.valorRecebido || 0);
+                    const atrasado = emp?.status !== 'pago' && new Date(emp?.dataVencimento || new Date()) < new Date();
                     
                     return (
                       <TableRow key={emp.id} className={atrasado ? 'bg-red-50' : ''}>
@@ -235,12 +235,12 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
                 <div>
                   <p className="text-gray-500">Restante</p>
                   <p className="font-bold text-lg text-orange-600">
-                    {formatarMoeda(modalPagamento.valorTotal - modalPagamento.pagamento.valorRecebido)}
+                    {formatarMoeda((modalPagamento?.valorTotal || 0) - (modalPagamento?.pagamento?.valorRecebido || 0))}
                   </p>
                 </div>
               </div>
 
-              {modalPagamento.valorTotal - modalPagamento.pagamento.valorRecebido > 0.01 && (
+              {(modalPagamento?.valorTotal || 0) - (modalPagamento?.pagamento?.valorRecebido || 0) > 0.01 && (
                 <form onSubmit={handlePagamento} className="space-y-4 border-b pb-6">
                   <h4 className="font-medium flex items-center gap-2"><Plus className="w-4 h-4"/> Novo Pagamento</h4>
                   <div className="grid grid-cols-2 gap-2">
@@ -263,7 +263,7 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
               <div>
                 <h4 className="font-medium mb-3 flex items-center gap-2"><History className="w-4 h-4"/> Histórico</h4>
                 <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                  {modalPagamento.pagamento.lancamentos.length === 0 ? (
+                  {(!modalPagamento.pagamento?.lancamentos || modalPagamento.pagamento.lancamentos.length === 0) ? (
                     <p className="text-gray-500 text-sm">Nenhum pagamento ainda.</p>
                   ) : (
                     modalPagamento.pagamento.lancamentos.map((l, i) => (

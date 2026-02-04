@@ -55,15 +55,15 @@ export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
     const totalVendasProduto = vendasConcluidas.reduce((sum, v) => sum + v.valorTotal, 0);
     const totalRecebidoProduto = vendasConcluidas.reduce((sum, v) => sum + v.pagamento.valorRecebido, 0);
 
-    // Totais (EMPRÉSTIMOS)
-    const totalEmprestado = emprestimos.reduce((sum, e) => sum + e.valorSolicitado, 0);
-    const totalJurosPrevisto = emprestimos.reduce((sum, e) => sum + (e.valorTotal - e.valorSolicitado), 0);
-    const totalRecebidoEmprestimo = emprestimos.reduce((sum, e) => sum + e.pagamento.valorRecebido, 0);
+    // Totais (EMPRÉSTIMOS) - com verificação de segurança
+    const totalEmprestado = emprestimos.reduce((sum, e) => sum + (e?.valorSolicitado || 0), 0);
+    const totalJurosPrevisto = emprestimos.reduce((sum, e) => sum + ((e?.valorTotal || 0) - (e?.valorSolicitado || 0)), 0);
+    const totalRecebidoEmprestimo = emprestimos.reduce((sum, e) => sum + (e?.pagamento?.valorRecebido || 0), 0);
 
     // Totais GERAIS
     const totalReceita = totalVendasProduto + totalJurosPrevisto; // Entradas (Vendas + Juros)
     const totalRecebidoGeral = totalRecebidoProduto + totalRecebidoEmprestimo;
-    const totalPendente = (totalVendasProduto + emprestimos.reduce((sum, e) => sum + e.valorTotal, 0)) - totalRecebidoGeral;
+    const totalPendente = (totalVendasProduto + emprestimos.reduce((sum, e) => sum + (e?.valorTotal || 0), 0)) - totalRecebidoGeral;
 
     // Lucro
     const totalCusto = vendasConcluidas.reduce((sum, v) => {
@@ -82,7 +82,8 @@ export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
     // Lucro Empréstimo Realizado = (Total Recebido - Principal Pago). 
     // Mas simplificando: Juros Total * (Pct Recebido)
     
-    const pctRecebidoEmprestimos = emprestimos.length > 0 ? totalRecebidoEmprestimo / emprestimos.reduce((s, e) => s + e.valorTotal, 0) : 0;
+    const totalValorEmprestimos = emprestimos.reduce((s, e) => s + (e?.valorTotal || 0), 0);
+    const pctRecebidoEmprestimos = emprestimos.length > 0 && totalValorEmprestimos > 0 ? totalRecebidoEmprestimo / totalValorEmprestimos : 0;
     const lucroFinanceiroRealizado = totalJurosPrevisto * (pctRecebidoEmprestimos || 0);
 
     const totalLucro = totalLucroProdutos + lucroFinanceiroRealizado;

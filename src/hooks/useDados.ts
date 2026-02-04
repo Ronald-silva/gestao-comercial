@@ -1,14 +1,101 @@
+import { useMemo } from 'react';
 import { useLocalStorage } from './useStorage';
 import type { Produto, Venda, Cliente, StatusPagamento, Emprestimo, Pagamento } from '@/types';
 
-export function useDados() {
-  const [produtos, setProdutos] = useLocalStorage<Produto[]>('produtos', []);
-  const [vendas, setVendas] = useLocalStorage<Venda[]>('vendas', []);
-  const [clientes, setClientes] = useLocalStorage<Cliente[]>('clientes', []);
-  const [emprestimos, setEmprestimos] = useLocalStorage<Emprestimo[]>('emprestimos', []);
+// Função para gerar ID único
+const gerarIdUnico = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
 
-  // Gerar ID único
-  const gerarId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+// Função para validar e migrar empréstimos antigos
+const validarEmprestimo = (emp: Partial<Emprestimo>): Emprestimo | null => {
+  if (!emp || typeof emp !== 'object') return null;
+  if (!emp.id || !emp.clienteNome) return null;
+
+  // Criar pagamento padrão se não existir
+  const pagamentoPadrao: Pagamento = {
+    id: gerarIdUnico(),
+    vendaId: emp.id,
+    formaPagamento: 'dinheiro',
+    valorTotal: emp.valorTotal || emp.valorSolicitado || 0,
+    valorRecebido: 0,
+    lancamentos: [],
+    status: 'pendente'
+  };
+
+  return {
+    id: emp.id,
+    clienteNome: emp.clienteNome || 'Cliente',
+    valorSolicitado: emp.valorSolicitado || 0,
+    taxaJuros: emp.taxaJuros ?? 0.10,
+    valorTotal: emp.valorTotal || (emp.valorSolicitado || 0) * 1.1,
+    dataEmprestimo: emp.dataEmprestimo || new Date().toISOString().split('T')[0],
+    dataVencimento: emp.dataVencimento || new Date().toISOString().split('T')[0],
+    status: emp.status || 'pendente',
+    pagamento: emp.pagamento && emp.pagamento.lancamentos ? emp.pagamento : pagamentoPadrao,
+    observacoes: emp.observacoes,
+    criadoEm: emp.criadoEm || new Date().toISOString()
+  };
+};
+
+// Função para validar e migrar vendas antigas
+const validarVenda = (venda: Partial<Venda>): Venda | null => {
+  if (!venda || typeof venda !== 'object') return null;
+  if (!venda.id) return null;
+
+  // Criar pagamento padrão se não existir
+  const pagamentoPadrao: Pagamento = {
+    id: gerarIdUnico(),
+    vendaId: venda.id,
+    formaPagamento: venda.formaPagamento || 'dinheiro',
+    valorTotal: venda.valorTotal || 0,
+    valorRecebido: 0,
+    lancamentos: [],
+    status: 'pendente'
+  };
+
+  return {
+    id: venda.id,
+    itens: Array.isArray(venda.itens) ? venda.itens : [],
+    valorTotal: venda.valorTotal || 0,
+    clienteNome: venda.clienteNome || 'Cliente',
+    clienteContato: venda.clienteContato,
+    dataVenda: venda.dataVenda || new Date().toISOString().split('T')[0],
+    formaPagamento: venda.formaPagamento || 'dinheiro',
+    numeroParcelas: venda.numeroParcelas || 1,
+    status: venda.status || 'pendente',
+    pagamento: venda.pagamento && venda.pagamento.lancamentos !== undefined ? venda.pagamento : pagamentoPadrao,
+    observacoes: venda.observacoes,
+    criadoEm: venda.criadoEm || new Date().toISOString()
+  };
+};
+
+export function useDados() {
+  const [produtosRaw, setProdutos] = useLocalStorage<Produto[]>('produtos', []);
+  const [vendasRaw, setVendas] = useLocalStorage<Venda[]>('vendas', []);
+  const [clientes, setClientes] = useLocalStorage<Cliente[]>('clientes', []);
+  const [emprestimosRaw, setEmprestimos] = useLocalStorage<Emprestimo[]>('emprestimos', []);
+
+  // Validar e filtrar dados corrompidos (memorizado para evitar loop infinito)
+  const produtos = useMemo(() =>
+    Array.isArray(produtosRaw) ? produtosRaw.filter(p => p && p.id) : [],
+    [produtosRaw]
+  );
+
+  const vendas = useMemo(() =>
+    Array.isArray(vendasRaw)
+      ? vendasRaw.map(validarVenda).filter((v): v is Venda => v !== null)
+      : [],
+    [vendasRaw]
+  );
+
+  const emprestimos = useMemo(() =>
+    Array.isArray(emprestimosRaw)
+      ? emprestimosRaw.map(validarEmprestimo).filter((e): e is Emprestimo => e !== null)
+      : [],
+    [emprestimosRaw]
+  );
+
+  // Gerar ID único (usa função externa)
+  const gerarId = gerarIdUnico;
 
   // PRODUTOS
   const adicionarProduto = (produto: Omit<Produto, 'id' | 'criadoEm'>) => {
