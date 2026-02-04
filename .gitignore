@@ -1,0 +1,27 @@
+# Dependências
+node_modules
+
+# Build
+dist
+dist-ssr
+*.local
+
+# Logs e cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Variáveis de ambiente (se usar no futuro)
+.env
+.env.local
+.env.*.local
+
+# Netlify
+.netlify

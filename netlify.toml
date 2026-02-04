@@ -1,0 +1,12 @@
+# Configuração do Netlify para Gestão de Vendas Pro
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Garante que o app React funcione ao recarregar em qualquer URL
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
