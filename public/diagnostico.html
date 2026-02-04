@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Diagnóstico - Gestão Pro</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .success { color: #10b981; }
+    .error { color: #ef4444; }
+    .warning { color: #f59e0b; }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button:active {
+      background: #2563eb;
+    }
+    pre {
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🔍 Diagnóstico do Sistema</h2>
+    <p>Este teste verifica se o seu navegador é compatível com o aplicativo.</p>
+  </div>
+
+  <div class="card">
+    <h3>Status dos Testes:</h3>
+    <div id="results"></div>
+  </div>
+
+  <div class="card">
+    <h3>Ações:</h3>
+    <button onclick="clearStorage()">🗑️ Limpar Dados Salvos</button>
+    <button onclick="location.href='/'">🔄 Ir para o App</button>
+  </div>
+
+  <div class="card">
+    <h3>Console de Erros:</h3>
+    <pre id="console"></pre>
+  </div>
+
+  <script>
+    const results = document.getElementById('results');
+    const consoleLog = document.getElementById('console');
+    let logs = [];
+
+    // Captura erros
+    window.onerror = function(msg, url, line, col, error) {
+      logs.push(`❌ ERRO: ${msg}\nLinha: ${line}\n${error?.stack || ''}`);
+      updateConsole();
+    };
+
+    // Captura console.error
+    const originalError = console.error;
+    console.error = function(...args) {
+      logs.push(`⚠️ ${args.join(' ')}`);
+      updateConsole();
+      originalError.apply(console, args);
+    };
+
+    function updateConsole() {
+      consoleLog.textContent = logs.join('\n\n') || 'Nenhum erro detectado.';
+    }
+
+    function addResult(test, passed, details = '') {
+      const icon = passed ? '✅' : '❌';
+      const className = passed ? 'success' : 'error';
+      results.innerHTML += `<div class="${className}">${icon} ${test}${details ? ': ' + details : ''}</div>`;
+    }
+
+    function clearStorage() {
+      if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        alert('✅ Dados limpos! Recarregando...');
+        location.reload();
+      }
+    }
+
+    // Executa testes
+    function runTests() {
+      // Teste 1: LocalStorage
+      try {
+        localStorage.setItem('test', 'ok');
+        const val = localStorage.getItem('test');
+        localStorage.removeItem('test');
+        addResult('LocalStorage', val === 'ok');
+      } catch (e) {
+        addResult('LocalStorage', false, e.message);
+      }
+
+      // Teste 2: JSON
+      try {
+        const obj = { test: 'data' };
+        const str = JSON.stringify(obj);
+        const parsed = JSON.parse(str);
+        addResult('JSON Parse/Stringify', parsed.test === 'data');
+      } catch (e) {
+        addResult('JSON Parse/Stringify', false, e.message);
+      }
+
+      // Teste 3: Dados salvos
+      try {
+        const produtos = localStorage.getItem('gestao-produtos');
+        const vendas = localStorage.getItem('gestao-vendas');
+        const emprestimos = localStorage.getItem('gestao-emprestimos');
+        
+        let info = [];
+        if (produtos) {
+          const p = JSON.parse(produtos);
+          info.push(`${p.length} produtos`);
+        }
+        if (vendas) {
+          const v = JSON.parse(vendas);
+          info.push(`${v.length} vendas`);
+        }
+        if (emprestimos) {
+          const e = JSON.parse(emprestimos);
+          info.push(`${e.length} empréstimos`);
+        }
+        
+        addResult('Dados Salvos', true, info.join(', ') || 'Nenhum dado salvo');
+      } catch (e) {
+        addResult('Dados Salvos', false, 'Dados corrompidos! Clique em "Limpar Dados"');
+        logs.push(`❌ Erro ao ler dados: ${e.message}`);
+        updateConsole();
+      }
+
+      // Teste 4: Viewport
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      addResult('Resolução', true, `${width}x${height}px`);
+
+      // Teste 5: User Agent
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      addResult('Dispositivo', true, isMobile ? 'Mobile' : 'Desktop');
+
+      // Teste 6: JavaScript moderno
+      try {
+        const arrow = () => 'ok';
+        const spread = {...{a: 1}};
+        const async = async () => 'ok';
+        addResult('JavaScript ES6+', true);
+      } catch (e) {
+        addResult('JavaScript ES6+', false, 'Navegador muito antigo');
+      }
+    }
+
+    // Executa ao carregar
+    runTests();
+    updateConsole();
+  </script>
+</body>
+</html>
