@@ -30,8 +30,10 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
 
     // Lucro
     const totalCusto = vendasFiltradas.reduce((sum, v) => {
-      const produto = produtos.find(p => p.id === v.produtoId);
-      return sum + (produto ? produto.precoCusto * v.quantidade : 0);
+      return sum + (v.itens?.reduce((sumItem, item) => {
+        const produto = produtos.find(p => p.id === item.produtoId);
+        return sumItem + (produto ? produto.precoCusto * item.quantidade : 0);
+      }, 0) || 0);
     }, 0);
     const totalLucro = totalVendas - totalCusto;
     const margemLucro = totalVendas > 0 ? (totalLucro / totalVendas) * 100 : 0;
@@ -42,46 +44,50 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
 
     // Por categoria
     const vendasPorCategoria = vendasFiltradas.reduce((acc, v) => {
-      const produto = produtos.find(p => p.id === v.produtoId);
-      if (!produto) return acc;
-      
-      const existente = acc.find(c => c.categoria === produto.categoria);
-      const lucro = (v.precoUnitario - produto.precoCusto) * v.quantidade;
-      
-      if (existente) {
-        existente.valor += v.valorTotal;
-        existente.quantidade += v.quantidade;
-        existente.lucro += lucro;
-      } else {
-        acc.push({
-          categoria: produto.categoria,
-          valor: v.valorTotal,
-          quantidade: v.quantidade,
-          lucro,
-        });
-      }
+      v.itens?.forEach(item => {
+        const produto = produtos.find(p => p.id === item.produtoId);
+        if (!produto) return;
+        
+        const lucro = (item.precoUnitario - produto.precoCusto) * item.quantidade;
+        const existente = acc.find(c => c.categoria === produto.categoria);
+        
+        if (existente) {
+          existente.valor += item.quantidade * item.precoUnitario;
+          existente.quantidade += item.quantidade;
+          existente.lucro += lucro;
+        } else {
+          acc.push({
+            categoria: produto.categoria,
+            valor: item.quantidade * item.precoUnitario,
+            quantidade: item.quantidade,
+            lucro,
+          });
+        }
+      });
       return acc;
     }, [] as { categoria: string; valor: number; quantidade: number; lucro: number }[]);
 
     // Produtos mais vendidos
     const produtosMaisVendidos = vendasFiltradas.reduce((acc, v) => {
-      const existente = acc.find(p => p.produtoId === v.produtoId);
-      const produto = produtos.find(p => p.id === v.produtoId);
-      const lucro = produto ? (v.precoUnitario - produto.precoCusto) * v.quantidade : 0;
-      
-      if (existente) {
-        existente.quantidade += v.quantidade;
-        existente.valor += v.valorTotal;
-        existente.lucro += lucro;
-      } else {
-        acc.push({
-          produtoId: v.produtoId,
-          produtoNome: v.produtoNome,
-          quantidade: v.quantidade,
-          valor: v.valorTotal,
-          lucro,
-        });
-      }
+      v.itens?.forEach(item => {
+        const existente = acc.find(p => p.produtoId === item.produtoId);
+        const produto = produtos.find(p => p.id === item.produtoId);
+        const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+        
+        if (existente) {
+          existente.quantidade += item.quantidade;
+          existente.valor += item.quantidade * item.precoUnitario;
+          existente.lucro += lucro;
+        } else {
+          acc.push({
+            produtoId: item.produtoId,
+            produtoNome: item.produtoNome,
+            quantidade: item.quantidade,
+            valor: item.quantidade * item.precoUnitario,
+            lucro,
+          });
+        }
+      });
       return acc;
     }, [] as { produtoId: string; produtoNome: string; quantidade: number; valor: number; lucro: number }[])
     .sort((a, b) => b.valor - a.valor)
@@ -140,8 +146,10 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
       
       const valorDia = vendasDia.reduce((sum, v) => sum + v.valorTotal, 0);
       const lucroDia = vendasDia.reduce((sum, v) => {
-        const produto = produtos.find(p => p.id === v.produtoId);
-        return sum + (produto ? (v.precoUnitario - produto.precoCusto) * v.quantidade : 0);
+        return sum + (v.itens?.reduce((sumItem, item) => {
+          const produto = produtos.find(p => p.id === item.produtoId);
+          return sumItem + (produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0);
+        }, 0) || 0);
       }, 0);
       
       evolucaoDiaria.push({

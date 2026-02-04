@@ -10,8 +10,9 @@ import { Relatorios } from '@/sections/Relatorios';
 import { ExportarDados } from '@/components/ExportarDados';
 import { LembretesContas } from '@/components/LembretesContas';
 import { AlertaEstoque } from '@/components/AlertaEstoque';
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, Receipt } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, Receipt, HandCoins } from 'lucide-react';
 import type { Venda } from '@/types';
+import { Emprestimos } from '@/sections/Emprestimos';
 
 function App() {
   const {
@@ -24,6 +25,9 @@ function App() {
     registrarPagamento,
     getProdutosEstoqueBaixo,
     getContasAReceber,
+    emprestimos,
+    adicionarEmprestimo,
+    registrarPagamentoEmprestimo,
   } = useDados();
 
   const [reciboVenda, setReciboVenda] = useState<Venda | null>(null);
@@ -35,27 +39,40 @@ function App() {
   };
 
   const handleAdicionarVenda = (venda: Parameters<typeof adicionarVenda>[0]) => {
-    const produto = produtos.find(p => p.id === venda.produtoId);
-    if (produto && produto.quantidade < venda.quantidade) {
-      toast.error(`Estoque insuficiente! Apenas ${produto.quantidade} unidades disponíveis.`);
-      return;
+    // Validar estoque
+    for (const item of venda.itens) {
+      const produto = produtos.find(p => p.id === item.produtoId);
+      if (!produto) continue;
+      if (produto.quantidade < item.quantidade) {
+        toast.error(`Estoque insuficiente para ${produto.nome}! Apenas ${produto.quantidade} unidades.`);
+        return;
+      }
     }
+
     adicionarVenda(venda);
     toast.success('Venda registrada com sucesso! Estoque atualizado.');
   };
 
-  const handleRegistrarPagamento = (vendaId: string, parcelaNumero?: number) => {
-    registrarPagamento(vendaId, parcelaNumero);
-    toast.success(parcelaNumero ? 'Parcela recebida!' : 'Pagamento registrado!');
+  const handleRegistrarPagamento = (vendaId: string, valor: number, data: string, obs?: string) => {
+    registrarPagamento(vendaId, valor, data, obs);
+    toast.success('Pagamento registrado com sucesso!');
+  };
+
+  const handleAdicionarEmprestimo = (dados: Parameters<typeof adicionarEmprestimo>[0]) => {
+    adicionarEmprestimo(dados);
+    toast.success('Empréstimo registrado com sucesso!');
+  };
+
+  const handlePagamentoEmprestimo = (id: string, valor: number, data: string, obs?: string) => {
+    registrarPagamentoEmprestimo(id, valor, data, obs);
+    toast.success('Baixa registrada com sucesso!');
   };
 
   const handleVerRecibo = (venda: Venda) => {
     setReciboVenda(venda);
   };
 
-  const produtoDoRecibo = reciboVenda 
-    ? produtos.find(p => p.id === reciboVenda.produtoId) 
-    : null;
+
 
   const produtosEstoqueBaixo = getProdutosEstoqueBaixo();
   const contasAReceber = getContasAReceber();
@@ -106,7 +123,7 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-white p-1.5 sm:p-1 rounded-xl shadow-sm h-auto gap-1">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full bg-white p-1.5 sm:p-1 rounded-xl shadow-sm h-auto gap-1">
             <TabsTrigger value="dashboard" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 min-h-[44px]">
               <LayoutDashboard className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -123,10 +140,14 @@ function App() {
               <BarChart3 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Relatórios</span>
             </TabsTrigger>
+            <TabsTrigger value="emprestimos" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 min-h-[44px]">
+              <HandCoins className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Empréstimos</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
-            <Dashboard produtos={produtos} vendas={vendas} />
+            <Dashboard produtos={produtos} vendas={vendas} emprestimos={emprestimos} />
           </TabsContent>
 
           <TabsContent value="produtos" className="mt-6">
@@ -151,13 +172,20 @@ function App() {
           <TabsContent value="relatorios" className="mt-6">
             <Relatorios produtos={produtos} vendas={vendas} />
           </TabsContent>
+
+          <TabsContent value="emprestimos" className="mt-6">
+            <Emprestimos 
+              emprestimos={emprestimos}
+              onAdicionar={handleAdicionarEmprestimo}
+              onRegistrarPagamento={handlePagamentoEmprestimo}
+            />
+          </TabsContent>
         </Tabs>
       </main>
 
       {/* Recibo Modal */}
       <Recibo 
         venda={reciboVenda}
-        produto={produtoDoRecibo || null}
         aberto={!!reciboVenda}
         onFechar={() => setReciboVenda(null)}
       />

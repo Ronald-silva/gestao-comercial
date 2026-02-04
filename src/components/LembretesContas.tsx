@@ -8,7 +8,7 @@ import type { Venda } from '@/types';
 
 interface LembretesContasProps {
   vendas: Venda[];
-  onRegistrarPagamento: (vendaId: string, parcelaNumero?: number) => void;
+  onRegistrarPagamento: (vendaId: string, valor: number, data: string, obs?: string) => void;
 }
 
 interface Conta {
@@ -42,7 +42,7 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
           vendaId: v.id,
           clienteNome: v.clienteNome,
           clienteContato: v.clienteContato,
-          produtoNome: v.produtoNome,
+          produtoNome: v.itens ? v.itens.map(i => i.produtoNome).join(', ') : 'Venda Antiga',
           valorPendente: v.pagamento.valorTotal - v.pagamento.valorRecebido,
           dataVencimento: parcelaMaisProxima?.dataVencimento,
           diasAtraso,
@@ -169,14 +169,25 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
                       <MessageCircle className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onRegistrarPagamento(conta.vendaId, conta.parcelaNumero)}
-                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Ação rápida: Baixar valor pendente total com data de hoje
+                        if (confirm(`Confirmar baixa total de ${formatarMoeda(conta.valorPendente)}?`)) {
+                          onRegistrarPagamento(
+                            conta.vendaId, 
+                            conta.valorPendente, 
+                            new Date().toISOString().split('T')[0], 
+                            'Baixa via Lembrete'
+                          );
+                        }
+                      }}
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      title="Baixar valor total"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
                 </div>
               </div>
             </div>

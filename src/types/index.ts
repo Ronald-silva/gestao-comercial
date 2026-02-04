@@ -27,6 +27,13 @@ export interface Parcela {
   pago: boolean;
 }
 
+export interface LancamentoPagamento {
+  id: string;
+  valor: number;
+  data: string;
+  observacao?: string;
+}
+
 export interface Pagamento {
   id: string;
   vendaId: string;
@@ -34,15 +41,20 @@ export interface Pagamento {
   valorTotal: number;
   valorRecebido: number;
   parcelas?: Parcela[];
+  lancamentos: LancamentoPagamento[];
   status: StatusPagamento;
 }
 
-export interface Venda {
-  id: string;
+export interface ItemVenda {
   produtoId: string;
   produtoNome: string;
   quantidade: number;
   precoUnitario: number;
+}
+
+export interface Venda {
+  id: string;
+  itens: ItemVenda[];
   valorTotal: number;
   clienteNome: string;
   clienteContato?: string;
@@ -94,4 +106,18 @@ export interface RelatorioMensal {
   totalLucro: number;
   quantidadeVendas: number;
   ticketMedio: number;
+}
+
+export interface Emprestimo {
+  id: string;
+  clienteNome: string;
+  valorSolicitado: number;
+  taxaJuros: number;
+  valorTotal: number;
+  dataEmprestimo: string;
+  dataVencimento: string;
+  status: 'pendente' | 'pago';
+  pagamento: Pagamento;
+  observacoes?: string;
+  criadoEm: string;
 }

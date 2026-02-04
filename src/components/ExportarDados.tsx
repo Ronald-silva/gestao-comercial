@@ -1,9 +1,21 @@
 import { Button } from '@/components/ui/button';
-import { FileSpreadsheet, FileText } from 'lucide-react';
+import { FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import type { Produto, Venda } from '@/types';
 import { formatarData } from '@/lib/utils';
+import { useDados } from '@/hooks/useDados';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ExportarDadosProps {
   produtos: Produto[];
@@ -11,6 +23,8 @@ interface ExportarDadosProps {
 }
 
 export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
+  const { limparDados } = useDados();
+
   const exportarExcel = () => {
     try {
       // Planilha de Produtos
@@ -28,35 +42,39 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       }));
 
       // Planilha de Vendas
-      const vendasData = vendas.map(v => {
-        const produto = produtos.find(p => p.id === v.produtoId);
-        const lucro = produto ? (v.precoUnitario - produto.precoCusto) * v.quantidade : 0;
-        return {
-          'Data': formatarData(v.dataVenda),
-          'Cliente': v.clienteNome,
-          'Contato': v.clienteContato || '-',
-          'Produto': v.produtoNome,
-          'Quantidade': v.quantidade,
-          'Preço Unitário': v.precoUnitario,
-          'Valor Total': v.valorTotal,
-          'Custo Total': produto ? produto.precoCusto * v.quantidade : 0,
-          'Lucro': lucro,
-          'Margem (%)': ((lucro / v.valorTotal) * 100).toFixed(2),
-          'Forma de Pagamento': v.formaPagamento,
-          'Parcelas': v.numeroParcelas,
-          'Status Pagamento': v.pagamento.status,
-          'Valor Recebido': v.pagamento.valorRecebido,
-          'Valor Pendente': v.pagamento.valorTotal - v.pagamento.valorRecebido,
-          'Observações': v.observacoes || '-',
-        };
+      const vendasData = vendas.flatMap(v => {
+        if (!v.itens || v.itens.length === 0) return [];
+        
+        return v.itens.map(item => {
+          const produto = produtos.find(p => p.id === item.produtoId);
+          const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+          return {
+            'Data': formatarData(v.dataVenda),
+            'Recibo': v.id.substring(0, 8),
+            'Cliente': v.clienteNome,
+            'Contato': v.clienteContato || '-',
+            'Produto': item.produtoNome,
+            'Quantidade': item.quantidade,
+            'Preço Unitário': item.precoUnitario,
+            'Valor Item': item.quantidade * item.precoUnitario,
+            'Custo Total': produto ? produto.precoCusto * item.quantidade : 0,
+            'Lucro': lucro,
+            'Margem (%)': item.precoUnitario > 0 ? ((lucro / (item.quantidade * item.precoUnitario)) * 100).toFixed(2) : 0,
+            'Forma de Pagamento': v.formaPagamento,
+            'Status Pagamento': v.pagamento.status,
+            'Observações': v.observacoes || '-',
+          };
+        });
       });
 
       // Resumo
       const totalVendas = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.valorTotal, 0);
       const totalRecebido = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.pagamento.valorRecebido, 0);
       const totalCusto = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => {
-        const produto = produtos.find(p => p.id === v.produtoId);
-        return sum + (produto ? produto.precoCusto * v.quantidade : 0);
+        return sum + (v.itens?.reduce((sumItem, item) => {
+          const produto = produtos.find(p => p.id === item.produtoId);
+          return sumItem + (produto ? produto.precoCusto * item.quantidade : 0);
+        }, 0) || 0);
       }, 0);
       const totalLucro = totalVendas - totalCusto;
 
@@ -114,19 +132,22 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       // CSV de Vendas (mais usado)
       const headers = ['Data', 'Cliente', 'Produto', 'Quantidade', 'Valor Total', 'Forma Pagamento', 'Status', 'Lucro'];
       
-      const rows = vendas.map(v => {
-        const produto = produtos.find(p => p.id === v.produtoId);
-        const lucro = produto ? (v.precoUnitario - produto.precoCusto) * v.quantidade : 0;
-        return [
-          formatarData(v.dataVenda),
-          v.clienteNome,
-          v.produtoNome,
-          v.quantidade,
-          v.valorTotal,
-          v.formaPagamento,
-          v.pagamento.status,
-          lucro,
-        ];
+      const rows = vendas.flatMap(v => {
+        if (!v.itens) return [];
+        return v.itens.map(item => {
+          const produto = produtos.find(p => p.id === item.produtoId);
+          const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+          return [
+            formatarData(v.dataVenda),
+            v.clienteNome,
+            item.produtoNome,
+            item.quantidade,
+            item.quantidade * item.precoUnitario,
+            v.formaPagamento,
+            v.pagamento.status,
+            lucro,
+          ];
+        });
       });
 
       const csvContent = [
@@ -148,7 +169,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
   };
 
   return (
-    <div className="flex gap-1 sm:gap-2">
+    <div className="flex gap-1 sm:gap-2 items-center">
       <Button variant="outline" size="sm" onClick={exportarExcel} className="text-green-700 border-green-300 hover:bg-green-50 min-h-[44px] px-2 sm:px-3" title="Exportar Excel">
         <FileSpreadsheet className="h-4 w-4 sm:mr-2 shrink-0" />
         <span className="hidden sm:inline">Excel</span>
@@ -157,6 +178,30 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
         <FileText className="h-4 w-4 sm:mr-2 shrink-0" />
         <span className="hidden sm:inline">CSV</span>
       </Button>
+      
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 min-h-[44px] px-2 sm:px-3" title="Limpar Dados">
+            <Trash2 className="h-4 w-4 sm:mr-2 shrink-0" />
+            <span className="hidden sm:inline">Resetar</span>
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação irá apagar TODOS os dados (produtos, vendas, clientes) do seu navegador.
+              Isso não pode ser desfeito.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={limparDados} className="bg-red-600 hover:bg-red-700">
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

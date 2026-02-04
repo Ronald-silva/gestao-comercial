@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,27 +7,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Receipt, CheckCircle } from 'lucide-react';
-import { formatarMoeda, formatarData, formasPagamento, statusPagamento } from '@/lib/utils';
-import type { Produto, Venda, FormaPagamento } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Search, Eye, Receipt, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
+import { formatarMoeda, formatarData, statusPagamento } from '@/lib/utils';
+import type { Produto, Venda, FormaPagamento, ItemVenda } from '@/types';
 
 interface VendasProps {
   produtos: Produto[];
   vendas: Venda[];
   onAdicionar: (venda: Omit<Venda, 'id' | 'criadoEm' | 'pagamento'>) => void;
-  onRegistrarPagamento: (vendaId: string, parcelaNumero?: number) => void;
+  onRegistrarPagamento: (vendaId: string, valor: number, data: string, obs?: string) => void;
   onVerRecibo: (venda: Venda) => void;
 }
 
 export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, onVerRecibo }: VendasProps) {
-  const [busca, setBusca] = useState('');
-  const [statusFiltro, setStatusFiltro] = useState<string>('todas');
-  const [modalAberto, setModalAberto] = useState(false);
-  const [modalDetalhes, setModalDetalhes] = useState<Venda | null>(null);
-
-  const [formData, setFormData] = useState({
+  const [abaAtiva, setAbaAtiva] = useState('nova');
+  
+  // Estados para Nova Venda
+  const [carrinho, setCarrinho] = useState<ItemVenda[]>([]);
+  const [itemAtual, setItemAtual] = useState({
     produtoId: '',
     quantidade: '1',
+  });
+  
+  const [dadosVenda, setDadosVenda] = useState({
     clienteNome: '',
     clienteContato: '',
     dataVenda: new Date().toISOString().split('T')[0],
@@ -36,51 +39,84 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
     observacoes: '',
   });
 
-  const vendasFiltradas = vendas.filter(v => {
-    const matchBusca = v.clienteNome.toLowerCase().includes(busca.toLowerCase()) ||
-                      v.produtoNome.toLowerCase().includes(busca.toLowerCase());
-    const matchStatus = statusFiltro === 'todas' || v.pagamento.status === statusFiltro;
-    return matchBusca && matchStatus;
-  });
+  // Estados para Histórico
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('todas');
+  const [modalDetalhes, setModalDetalhes] = useState<Venda | null>(null);
+
+  // --- LÓGICA DO CARRINHO ---
 
   const produtoSelecionado = useMemo(() => 
-    produtos.find(p => p.id === formData.produtoId),
-    [produtos, formData.produtoId]
+    produtos.find(p => p.id === itemAtual.produtoId),
+    [produtos, itemAtual.produtoId]
   );
 
-  const valorTotal = useMemo(() => {
-    if (!produtoSelecionado) return 0;
-    return produtoSelecionado.precoVenda * parseInt(formData.quantidade || '1');
-  }, [produtoSelecionado, formData.quantidade]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const adicionarAoCarrinho = () => {
     if (!produtoSelecionado) return;
 
+    const qtd = parseInt(itemAtual.quantidade);
+    
+    // Verificar se já existe no carrinho para somar
+    const itemExistenteIndex = carrinho.findIndex(i => i.produtoId === produtoSelecionado.id);
+    
+    if (itemExistenteIndex >= 0) {
+      // Validar estoque total (carrinho + nova qtd)
+      const qtdAtualNoCarrinho = carrinho[itemExistenteIndex].quantidade;
+      if (qtdAtualNoCarrinho + qtd > produtoSelecionado.quantidade) {
+        alert(`Estoque insuficiente! Você já tem ${qtdAtualNoCarrinho} no carrinho. Estoque total: ${produtoSelecionado.quantidade}`);
+        return;
+      }
+      
+      const novoCarrinho = [...carrinho];
+      novoCarrinho[itemExistenteIndex].quantidade += qtd;
+      setCarrinho(novoCarrinho);
+    } else {
+      setCarrinho([
+        ...carrinho, 
+        {
+          produtoId: produtoSelecionado.id,
+          produtoNome: produtoSelecionado.nome,
+          quantidade: qtd,
+          precoUnitario: produtoSelecionado.precoVenda,
+        }
+      ]);
+    }
+
+    // Resetar campos do item
+    setItemAtual({ ...itemAtual, quantidade: '1', produtoId: '' });
+  };
+
+  const removerDoCarrinho = (index: number) => {
+    const novoCarrinho = [...carrinho];
+    novoCarrinho.splice(index, 1);
+    setCarrinho(novoCarrinho);
+  };
+
+  const valorTotalCarrinho = useMemo(() => {
+    return carrinho.reduce((acc, item) => acc + (item.quantidade * item.precoUnitario), 0);
+  }, [carrinho]);
+
+  const finalizarVenda = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (carrinho.length === 0) return;
+
     const venda = {
-      produtoId: formData.produtoId,
-      produtoNome: produtoSelecionado.nome,
-      quantidade: parseInt(formData.quantidade),
-      precoUnitario: produtoSelecionado.precoVenda,
-      valorTotal,
-      clienteNome: formData.clienteNome,
-      clienteContato: formData.clienteContato,
-      dataVenda: formData.dataVenda,
-      formaPagamento: formData.formaPagamento,
-      numeroParcelas: parseInt(formData.numeroParcelas),
+      itens: carrinho,
+      valorTotal: valorTotalCarrinho,
+      clienteNome: dadosVenda.clienteNome,
+      clienteContato: dadosVenda.clienteContato,
+      dataVenda: dadosVenda.dataVenda,
+      formaPagamento: dadosVenda.formaPagamento,
+      numeroParcelas: parseInt(dadosVenda.numeroParcelas),
       status: 'pendente' as const,
-      observacoes: formData.observacoes,
+      observacoes: dadosVenda.observacoes,
     };
 
     onAdicionar(venda);
-    resetForm();
-    setModalAberto(false);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      produtoId: '',
-      quantidade: '1',
+    
+    // Resetar tudo
+    setCarrinho([]);
+    setDadosVenda({
       clienteNome: '',
       clienteContato: '',
       dataVenda: new Date().toISOString().split('T')[0],
@@ -88,466 +124,480 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
       numeroParcelas: '1',
       observacoes: '',
     });
+    setAbaAtiva('historico'); // Ir para histórico para ver a venda
   };
 
-  const handleNovo = () => {
-    resetForm();
-    setModalAberto(true);
-  };
+  // --- LÓGICA DO HISTÓRICO ---
+
+  const vendasFiltradas = vendas.filter(v => {
+    const matchBusca = v.clienteNome.toLowerCase().includes(busca.toLowerCase()) ||
+                      (v.itens && v.itens.some(i => i.produtoNome.toLowerCase().includes(busca.toLowerCase()))) ||
+                      v.id.includes(busca);
+    const matchStatus = statusFiltro === 'todas' || v.pagamento.status === statusFiltro;
+    return matchBusca && matchStatus;
+  });
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header com Filtros */}
-      <Card>
-        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 w-full">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 shrink-0" />
-                <Input
-                  placeholder="Buscar vendas..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
-              <Select value={statusFiltro} onValueChange={setStatusFiltro}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todos</SelectItem>
-                  <SelectItem value="pago">Pago</SelectItem>
-                  <SelectItem value="parcial">Parcial</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleNovo} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto min-h-[44px]">
-              <Plus className="h-4 w-4 mr-2 shrink-0" />
-              Nova Venda
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="nova">Nova Venda</TabsTrigger>
+          <TabsTrigger value="historico">Histórico de Vendas</TabsTrigger>
+        </TabsList>
 
-      {/* Modal Nova Venda */}
-      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Registrar Nova Venda</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="produto">Produto *</Label>
-                <Select 
-                  value={formData.produtoId} 
-                  onValueChange={(v) => setFormData({ ...formData, produtoId: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {produtos.map(p => (
-                      <SelectItem 
-                        key={p.id} 
-                        value={p.id}
-                        disabled={p.quantidade === 0}
-                      >
-                        {p.quantidade === 0 ? '❌ ' : p.quantidade <= 3 ? '⚠️ ' : '✅ '}
-                        {p.nome} - {formatarMoeda(p.precoVenda)} 
-                        ({p.quantidade} em estoque)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {produtoSelecionado && (
-                <div className={`col-span-2 p-3 rounded-lg ${
-                  produtoSelecionado.quantidade === 0 
-                    ? 'bg-red-50 border border-red-200' 
-                    : produtoSelecionado.quantidade <= 3 
-                    ? 'bg-orange-50 border border-orange-200'
-                    : 'bg-blue-50 border border-blue-200'
-                }`}>
-                  <p className={`text-sm ${
-                    produtoSelecionado.quantidade === 0 
-                      ? 'text-red-800' 
-                      : produtoSelecionado.quantidade <= 3 
-                      ? 'text-orange-800'
-                      : 'text-blue-800'
-                  }`}>
-                    <strong>Preço:</strong> {formatarMoeda(produtoSelecionado.precoVenda)} | 
-                    <strong> Estoque:</strong> {' '}
-                    <span className={produtoSelecionado.quantidade <= 3 ? 'font-bold' : ''}>
-                      {produtoSelecionado.quantidade} unidades
-                    </span>
-                    {produtoSelecionado.quantidade === 0 && (
-                      <span className="block mt-1 text-red-600 font-medium">⚠️ Produto sem estoque!</span>
-                    )}
-                    {produtoSelecionado.quantidade > 0 && produtoSelecionado.quantidade <= 3 && (
-                      <span className="block mt-1 text-orange-600 font-medium">⚠️ Estoque baixo!</span>
-                    )}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="quantidade">
-                  Quantidade * 
-                  {produtoSelecionado && (
-                    <span className="text-xs text-gray-500 ml-1">
-                      (máx: {produtoSelecionado.quantidade})
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  min="1"
-                  max={produtoSelecionado?.quantidade || 1}
-                  value={formData.quantidade}
-                  onChange={(e) => {
-                    const valor = parseInt(e.target.value) || 1;
-                    const max = produtoSelecionado?.quantidade || 1;
-                    setFormData({ ...formData, quantidade: Math.min(valor, max).toString() });
-                  }}
-                  disabled={!produtoSelecionado || produtoSelecionado.quantidade === 0}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="dataVenda">Data da Venda *</Label>
-                <Input
-                  id="dataVenda"
-                  type="date"
-                  value={formData.dataVenda}
-                  onChange={(e) => setFormData({ ...formData, dataVenda: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="clienteNome">Nome do Cliente *</Label>
-                <Input
-                  id="clienteNome"
-                  value={formData.clienteNome}
-                  onChange={(e) => setFormData({ ...formData, clienteNome: e.target.value })}
-                  placeholder="Nome completo do cliente"
-                  required
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="clienteContato">Contato do Cliente</Label>
-                <Input
-                  id="clienteContato"
-                  value={formData.clienteContato}
-                  onChange={(e) => setFormData({ ...formData, clienteContato: e.target.value })}
-                  placeholder="Telefone, WhatsApp ou email"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="formaPagamento">Forma de Pagamento *</Label>
-                <Select 
-                  value={formData.formaPagamento} 
-                  onValueChange={(v) => setFormData({ ...formData, formaPagamento: v as FormaPagamento })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="cartao">Cartão</SelectItem>
-                    <SelectItem value="parcelado">Parcelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {(formData.formaPagamento === 'parcelado' || formData.formaPagamento === 'cartao') && (
+        {/* ABA NOVA VENDA */}
+        <TabsContent value="nova">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Esquerda: Adicionar Produtos */}
+            <Card className="lg:col-span-1 border-t-4 border-t-blue-500">
+              <CardHeader>
+                <CardTitle className="text-lg">1. Adicionar Produtos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="numeroParcelas">Número de Parcelas</Label>
+                  <Label>Selecione o Produto</Label>
+                  <Select 
+                    value={itemAtual.produtoId} 
+                    onValueChange={(v) => setItemAtual({ ...itemAtual, produtoId: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Buscar produto..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {produtos.map(p => (
+                        <SelectItem 
+                          key={p.id} 
+                          value={p.id}
+                          disabled={p.quantidade === 0}
+                        >
+                          {p.quantidade === 0 ? '❌ ' : p.quantidade <= 3 ? '⚠️ ' : '✅ '}
+                          {p.nome} ({formatarMoeda(p.precoVenda)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {produtoSelecionado && (
+                  <div className={`p-3 rounded-lg border ${
+                    produtoSelecionado.quantidade === 0 ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <p className="text-sm font-medium">
+                      Estoque: {produtoSelecionado.quantidade} | Preço: {formatarMoeda(produtoSelecionado.precoVenda)}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <Label>Quantidade</Label>
                   <Input
-                    id="numeroParcelas"
                     type="number"
                     min="1"
-                    max="12"
-                    value={formData.numeroParcelas}
-                    onChange={(e) => setFormData({ ...formData, numeroParcelas: e.target.value })}
+                    max={produtoSelecionado?.quantidade || 1}
+                    value={itemAtual.quantidade}
+                    onChange={(e) => setItemAtual({ ...itemAtual, quantidade: e.target.value })}
+                    disabled={!produtoSelecionado}
                   />
                 </div>
-              )}
 
-              <div className="col-span-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Input
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  placeholder="Observações adicionais"
-                />
-              </div>
-            </div>
-
-            {valorTotal > 0 && (
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-green-800 font-medium">Valor Total:</span>
-                  <span className="text-2xl font-bold text-green-700">{formatarMoeda(valorTotal)}</span>
-                </div>
-                {parseInt(formData.numeroParcelas) > 1 && (
-                  <p className="text-sm text-green-600 mt-1 text-center">
-                    {formData.numeroParcelas}x de {formatarMoeda(valorTotal / parseInt(formData.numeroParcelas))}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                className="bg-green-600 hover:bg-green-700"
-                disabled={!produtoSelecionado || !formData.clienteNome || produtoSelecionado.quantidade === 0}
-              >
-                {produtoSelecionado?.quantidade === 0 ? 'Sem Estoque' : 'Registrar Venda'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Detalhes */}
-      <Dialog open={!!modalDetalhes} onOpenChange={() => setModalDetalhes(null)}>
-        <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Venda</DialogTitle>
-          </DialogHeader>
-          {modalDetalhes && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Cliente</p>
-                  <p className="font-medium">{modalDetalhes.clienteNome}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Contato</p>
-                  <p className="font-medium">{modalDetalhes.clienteContato || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Produto</p>
-                  <p className="font-medium">{modalDetalhes.produtoNome}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Quantidade</p>
-                  <p className="font-medium">{modalDetalhes.quantidade}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Data</p>
-                  <p className="font-medium">{formatarData(modalDetalhes.dataVenda)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Forma de Pagamento</p>
-                  <p className="font-medium">{formasPagamento[modalDetalhes.formaPagamento].label}</p>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Valor Total:</span>
-                  <span className="text-xl font-bold">{formatarMoeda(modalDetalhes.valorTotal)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Recebido:</span>
-                  <span className="text-green-600 font-medium">{formatarMoeda(modalDetalhes.pagamento.valorRecebido)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Pendente:</span>
-                  <span className="text-orange-600 font-medium">
-                    {formatarMoeda(modalDetalhes.pagamento.valorTotal - modalDetalhes.pagamento.valorRecebido)}
-                  </span>
-                </div>
-              </div>
-
-              {modalDetalhes.pagamento.parcelas && modalDetalhes.pagamento.parcelas.length > 1 && (
-                <div>
-                  <h4 className="font-medium mb-2">Parcelas</h4>
-                  <div className="space-y-2">
-                    {modalDetalhes.pagamento.parcelas.map((parcela) => (
-                      <div key={parcela.numero} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span>Parcela {parcela.numero}</span>
-                        <div className="flex items-center gap-3">
-                          <span>{formatarMoeda(parcela.valor)}</span>
-                          <span className="text-sm text-gray-500">Venc: {formatarData(parcela.dataVencimento)}</span>
-                          {parcela.pago ? (
-                            <Badge className="bg-green-100 text-green-700">Pago</Badge>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                onRegistrarPagamento(modalDetalhes.id, parcela.numero);
-                                setModalDetalhes({
-                                  ...modalDetalhes,
-                                  pagamento: {
-                                    ...modalDetalhes.pagamento,
-                                    parcelas: modalDetalhes.pagamento.parcelas?.map(p => 
-                                      p.numero === parcela.numero 
-                                        ? { ...p, pago: true, dataPagamento: new Date().toISOString().split('T')[0] }
-                                        : p
-                                    ),
-                                    valorRecebido: modalDetalhes.pagamento.valorRecebido + parcela.valor,
-                                    status: modalDetalhes.pagamento.valorRecebido + parcela.valor >= modalDetalhes.pagamento.valorTotal ? 'pago' : 'parcial'
-                                  }
-                                });
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Receber
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
                 <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => onVerRecibo(modalDetalhes)}
+                  onClick={adicionarAoCarrinho} 
+                  className="w-full"
+                  disabled={!produtoSelecionado || parseInt(itemAtual.quantidade) < 1}
                 >
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Ver Recibo
+                  <Plus className="w-4 h-4 mr-2" /> Adicionar ao Carrinho
                 </Button>
-                {modalDetalhes.pagamento.status !== 'pago' && !modalDetalhes.pagamento.parcelas && (
-                  <Button 
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      onRegistrarPagamento(modalDetalhes.id);
-                      setModalDetalhes(null);
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Receber Total
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </CardContent>
+            </Card>
 
-      {/* Lista de Vendas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span className="text-2xl">🛒</span>
-            Histórico de Vendas ({vendasFiltradas.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {vendasFiltradas.length === 0 ? (
-            <div className="text-center py-12">
-              <span className="text-4xl mb-4 block">🛒</span>
-              <p className="text-gray-500">Nenhuma venda encontrada</p>
-              <p className="text-sm text-gray-400 mt-1">Registre sua primeira venda para começar</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto scroll-touch -mx-4 sm:mx-0">
-              <Table className="min-w-[640px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Data</TableHead>
-                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Cliente</TableHead>
-                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden md:table-cell">Produto</TableHead>
-                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Valor</TableHead>
-                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">Forma</TableHead>
-                    <TableHead className="px-2 sm:px-4 text-xs sm:text-sm">Status</TableHead>
-                    <TableHead className="text-right px-2 sm:px-4 text-xs sm:text-sm">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendasFiltradas.map((venda) => {
-                    const forma = formasPagamento[venda.formaPagamento];
-                    const status = statusPagamento[venda.pagamento.status];
-                    
-                    return (
-                      <TableRow key={venda.id} className="hover:bg-gray-50">
-                        <TableCell className="text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">{formatarData(venda.dataVenda)}</TableCell>
-                        <TableCell className="px-2 sm:px-4 max-w-[100px] sm:max-w-none">
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{venda.clienteNome}</p>
-                            {venda.clienteContato && (
-                              <p className="text-xs text-gray-500 truncate">{venda.clienteContato}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell px-2 sm:px-4">
-                          <p className="text-sm">{venda.produtoNome}</p>
-                          <p className="text-xs text-gray-500">{venda.quantidade}x {formatarMoeda(venda.precoUnitario)}</p>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
-                          {formatarMoeda(venda.valorTotal)}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell px-2 sm:px-4">
-                          <Badge className={`${forma.cor} text-white text-xs`}>
-                            {forma.icone} {forma.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-2 sm:px-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${status.cor.replace('bg-', 'bg-opacity-20 bg-')} ${status.textoCor}`}>
-                            {status.label}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right px-2 sm:px-4">
-                          <div className="flex justify-end gap-1 sm:gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setModalDetalhes(venda)}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onVerRecibo(venda)}
-                              className="text-purple-600 hover:text-purple-700"
-                            >
-                              <Receipt className="h-4 w-4" />
-                            </Button>
-                            {venda.pagamento.status !== 'pago' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onRegistrarPagamento(venda.id)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4" />
+            {/* Centro/Direita: Carrinho e Finalização */}
+            <Card className="lg:col-span-2 border-t-4 border-t-green-500 flex flex-col h-full">
+              <CardHeader>
+                <CardTitle className="text-lg flex justify-between items-center">
+                  <span>2. Carrinho e Pagamento</span>
+                  <Badge variant="secondary" className="text-base px-3 py-1">
+                    Total: {formatarMoeda(valorTotalCarrinho)}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col gap-6">
+                
+                {/* Tabela Carrinho */}
+                <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[150px]">
+                  {carrinho.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-gray-400">
+                      <ShoppingCart className="w-12 h-12 mb-2 opacity-20" />
+                      <p>O carrinho está vazio</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead className="w-20 text-center">Qtd</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {carrinho.map((item, idx) => (
+                          <TableRow key={idx} className="bg-white">
+                            <TableCell className="font-medium">{item.produtoNome}</TableCell>
+                            <TableCell className="text-center">{item.quantidade}</TableCell>
+                            <TableCell className="text-right">{formatarMoeda(item.quantidade * item.precoUnitario)}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" onClick={() => removerDoCarrinho(idx)} className="text-red-500 hover:text-red-700 h-8 w-8 p-0">
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            )}
-                          </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+
+                {/* Formulário Cliente e Pagamento */}
+                <form id="form-venda" onSubmit={finalizarVenda} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="cliente">Nome do Cliente *</Label>
+                      <Input 
+                        id="cliente" 
+                        value={dadosVenda.clienteNome}
+                        onChange={e => setDadosVenda({...dadosVenda, clienteNome: e.target.value})}
+                        required
+                        placeholder="Ex: João Silva"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contato">Contato</Label>
+                      <Input 
+                        id="contato" 
+                        value={dadosVenda.clienteContato}
+                        onChange={e => setDadosVenda({...dadosVenda, clienteContato: e.target.value})}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Data</Label>
+                        <Input 
+                          type="date" 
+                          value={dadosVenda.dataVenda}
+                          onChange={e => setDadosVenda({...dadosVenda, dataVenda: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label>Pagamento *</Label>
+                        <Select 
+                          value={dadosVenda.formaPagamento} 
+                          onValueChange={(v) => setDadosVenda({ ...dadosVenda, formaPagamento: v as FormaPagamento })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pix">PIX</SelectItem>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                            <SelectItem value="cartao">Cartão</SelectItem>
+                            <SelectItem value="parcelado">Parcelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {(dadosVenda.formaPagamento === 'parcelado' || dadosVenda.formaPagamento === 'cartao') && (
+                      <div>
+                        <Label>Parcelas</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="12"
+                          value={dadosVenda.numeroParcelas}
+                          onChange={(e) => setDadosVenda({ ...dadosVenda, numeroParcelas: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <Label>Observações</Label>
+                    <Input 
+                      value={dadosVenda.observacoes}
+                      onChange={e => setDadosVenda({...dadosVenda, observacoes: e.target.value})}
+                    />
+                  </div>
+                </form>
+              </CardContent>
+              <CardFooter className="bg-gray-50 border-t p-4 flex justify-end gap-3">
+                 <Button variant="outline" type="button" onClick={() => {
+                   setCarrinho([]);
+                   setItemAtual({...itemAtual, produtoId: ''});
+                 }}>
+                   Limpar
+                 </Button>
+                 <Button 
+                   type="submit" 
+                   form="form-venda" 
+                   className="bg-green-600 hover:bg-green-700 min-w-[150px]"
+                   disabled={carrinho.length === 0 || !dadosVenda.clienteNome}
+                 >
+                   <CheckCircle className="w-4 h-4 mr-2" /> Finalizar Venda
+                 </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ABA HISTÓRICO */}
+        <TabsContent value="historico">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <CardTitle>Histórico de Transações</CardTitle>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-60">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input 
+                      placeholder="Buscar por cliente ou produto..." 
+                      className="pl-9" 
+                      value={busca}
+                      onChange={e => setBusca(e.target.value)}
+                    />
+                  </div>
+                  <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todos</SelectItem>
+                      <SelectItem value="pago">Pago</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Resumo</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vendasFiltradas.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          Nenhuma venda encontrada.
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    ) : (
+                      vendasFiltradas.map((venda) => (
+                        <TableRow key={venda.id}>
+                          <TableCell className="whitespace-nowrap">{formatarData(venda.dataVenda)}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{venda.clienteNome}</div>
+                            <div className="text-xs text-gray-500">{venda.clienteContato}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {venda.itens?.length || 0} itens
+                            </div>
+                            <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                              {venda.itens?.map(i => i.produtoNome).join(', ')}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatarMoeda(venda.valorTotal)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={venda.pagamento.status === 'pago' ? 'default' : 'secondary'} className={
+                              venda.pagamento.status === 'pago' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            }>
+                              {statusPagamento[venda.pagamento.status].label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)}>
+                                <Eye className="w-4 h-4 text-blue-500" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => onVerRecibo(venda)}>
+                                <Receipt className="w-4 h-4 text-purple-500" />
+                              </Button>
+                              {venda.pagamento.status !== 'pago' && (
+                                <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)}>
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* MODAL DETALHES FINANCEIROS REFORMULADO */}
+      <Dialog open={!!modalDetalhes} onOpenChange={() => setModalDetalhes(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Venda</DialogTitle>
+          </DialogHeader>
+          {modalDetalhes && (
+            <div className="space-y-6">
+              {/* Resumo */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Cliente</p>
+                  <p className="font-medium truncate">{modalDetalhes.clienteNome}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Total Venda</p>
+                  <p className="font-medium text-blue-600">{formatarMoeda(modalDetalhes.valorTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Já Recebido</p>
+                  <p className="font-medium text-green-600">{formatarMoeda(modalDetalhes.pagamento.valorRecebido)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">A Receber</p>
+                  <p className="font-bold text-orange-600">
+                    {formatarMoeda(modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Lado Esquerdo: Novo Pagamento */}
+                <div className="space-y-4">
+                  <h4 className="font-medium border-b pb-2 flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Registrar Pagamento
+                  </h4>
+                  
+                  {modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido <= 0.01 ? (
+                    <div className="p-4 bg-green-100 text-green-800 rounded-md text-center">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2" />
+                      <p className="font-bold">Venda Quitada!</p>
+                      <p className="text-sm">Não há débitos pendentes.</p>
+                    </div>
+                  ) : (
+                    <form 
+                      className="space-y-3"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const form = e.target as HTMLFormElement;
+                        const valor = parseFloat((form.elements.namedItem('valor') as HTMLInputElement).value);
+                        const data = (form.elements.namedItem('data') as HTMLInputElement).value;
+                        const obs = (form.elements.namedItem('obs') as HTMLInputElement).value;
+                        
+                        onRegistrarPagamento(modalDetalhes.id, valor, data, obs);
+                        setModalDetalhes(null); // Fecha modal após pagar
+                      }}
+                    >
+                      <div>
+                        <Label>Valor do Pagamento</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
+                          <Input 
+                            name="valor"
+                            type="number" 
+                            step="0.01" 
+                            max={modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido}
+                            defaultValue={(modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido).toFixed(2)}
+                            className="pl-8 font-bold text-lg"
+                            required 
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Data do Pagamento</Label>
+                        <Input name="data" type="date" defaultValue={new Date().toISOString().split('T')[0]} required />
+                      </div>
+                      <div>
+                        <Label>Observação (Opcional)</Label>
+                        <Input name="obs" placeholder="Ex: Pix, Adiantamento..." />
+                      </div>
+                      <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                        Confirmar Baixa
+                      </Button>
+                    </form>
+                  )}
+                </div>
+
+                {/* Lado Direito: Histórico e Parcelas */}
+                <div className="space-y-4 h-[300px] overflow-y-auto pr-2">
+                  <Tabs defaultValue="historico">
+                    <TabsList className="w-full grid grid-cols-2">
+                      <TabsTrigger value="historico">Histórico</TabsTrigger>
+                      <TabsTrigger value="parcelas">Parcelas Originais</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="historico" className="space-y-3 mt-4">
+                      {(!modalDetalhes.pagamento.lancamentos || modalDetalhes.pagamento.lancamentos.length === 0) ? (
+                        <p className="text-center text-gray-500 text-sm py-4">Nenhum pagamento registrado.</p>
+                      ) : (
+                        modalDetalhes.pagamento.lancamentos.map((lanc, i) => (
+                          <div key={i} className="flex justify-between items-center p-2 bg-white border rounded shadow-sm">
+                            <div>
+                              <p className="font-bold text-green-700">{formatarMoeda(lanc.valor)}</p>
+                              <p className="text-xs text-gray-500">{formatarData(lanc.data)}</p>
+                            </div>
+                            {lanc.observacao && (
+                              <p className="text-xs text-gray-400 italic max-w-[100px] truncate">{lanc.observacao}</p>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="parcelas" className="space-y-3 mt-4">
+                      {modalDetalhes.pagamento.parcelas?.map((p, i) => (
+                        <div key={i} className={`flex justify-between items-center p-2 border rounded ${p.pago ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                          <div>
+                            <span className="text-sm font-medium">Parcela {p.numero}</span>
+                            <p className="text-xs text-gray-500">Venc: {formatarData(p.dataVencimento)}</p>
+                          </div>
+                          <div className="text-right">
+                             <p className="font-medium">{formatarMoeda(p.valor)}</p>
+                             {p.pago ? (
+                               <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">Pago</Badge>
+                             ) : (
+                               <Badge variant="outline" className="text-[10px]">Pendente</Badge>
+                             )}
+                          </div>
+                        </div>
+                      ))}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 justify-end border-t pt-4">
+                <Button variant="outline" onClick={() => setModalDetalhes(null)}>Fechar</Button>
+                <Button onClick={() => onVerRecibo(modalDetalhes)}> <Receipt className="w-4 h-4 mr-2" /> Recibo</Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

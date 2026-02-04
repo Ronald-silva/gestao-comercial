@@ -1,8 +1,15 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, DollarSign, ShoppingCart, Package, AlertCircle } from 'lucide-react';
+import { 
+  TrendingUp, 
+  DollarSign, 
+  Package, 
+  AlertCircle,
+  Wallet,
+  ShoppingCart
+} from 'lucide-react';
 import { formatarMoeda, formatarData, categorias } from '@/lib/utils';
-import type { Produto, Venda } from '@/types';
+import type { Produto, Venda, Emprestimo } from '@/types';
 import { 
   BarChart, 
   Bar, 
@@ -22,11 +29,12 @@ import {
 interface DashboardProps {
   produtos: Produto[];
   vendas: Venda[];
+  emprestimos: Emprestimo[];
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-export function Dashboard({ produtos, vendas }: DashboardProps) {
+export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
   const dados = useMemo(() => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -43,36 +51,64 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
     const vendasMes = vendasConcluidas.filter(v => new Date(v.dataVenda) >= inicioMes);
 
     // Totais
-    const totalVendas = vendasConcluidas.reduce((sum, v) => sum + v.valorTotal, 0);
-    const totalRecebido = vendasConcluidas.reduce((sum, v) => sum + v.pagamento.valorRecebido, 0);
-    const totalPendente = totalVendas - totalRecebido;
+    // Totais (VENDAS)
+    const totalVendasProduto = vendasConcluidas.reduce((sum, v) => sum + v.valorTotal, 0);
+    const totalRecebidoProduto = vendasConcluidas.reduce((sum, v) => sum + v.pagamento.valorRecebido, 0);
+
+    // Totais (EMPRÉSTIMOS)
+    const totalEmprestado = emprestimos.reduce((sum, e) => sum + e.valorSolicitado, 0);
+    const totalJurosPrevisto = emprestimos.reduce((sum, e) => sum + (e.valorTotal - e.valorSolicitado), 0);
+    const totalRecebidoEmprestimo = emprestimos.reduce((sum, e) => sum + e.pagamento.valorRecebido, 0);
+
+    // Totais GERAIS
+    const totalReceita = totalVendasProduto + totalJurosPrevisto; // Entradas (Vendas + Juros)
+    const totalRecebidoGeral = totalRecebidoProduto + totalRecebidoEmprestimo;
+    const totalPendente = (totalVendasProduto + emprestimos.reduce((sum, e) => sum + e.valorTotal, 0)) - totalRecebidoGeral;
 
     // Lucro
     const totalCusto = vendasConcluidas.reduce((sum, v) => {
-      const produto = produtos.find(p => p.id === v.produtoId);
-      return sum + (produto ? produto.precoCusto * v.quantidade : 0);
+      return sum + (v.itens?.reduce((sumItem, item) => {
+        const produto = produtos.find(p => p.id === item.produtoId);
+        return sumItem + (produto ? produto.precoCusto * item.quantidade : 0);
+      }, 0) || 0);
     }, 0);
-    const totalLucro = totalVendas - totalCusto;
-    const margemLucro = totalVendas > 0 ? (totalLucro / totalVendas) * 100 : 0;
+    const totalLucroProdutos = totalVendasProduto - totalCusto;
+    
+    // Lucro total = Lucro Produtos + Juros dos Empréstimos (Juros é 100% lucro financeiro)
+    // Nota: O "Custo" do empréstimo é o dinheiro parado, mas contabilmente o juro é lucro.
+    // Se quisermos considerar apenas JUROS RECEBIDOS proporcionalmente, seria mais complexo.
+    // Aqui assumimos o lucro projetado total OU proporcional ao recebido.
+    // Vamos usar Proporcional para ser mais realista:
+    // Lucro Empréstimo Realizado = (Total Recebido - Principal Pago). 
+    // Mas simplificando: Juros Total * (Pct Recebido)
+    
+    const pctRecebidoEmprestimos = emprestimos.length > 0 ? totalRecebidoEmprestimo / emprestimos.reduce((s, e) => s + e.valorTotal, 0) : 0;
+    const lucroFinanceiroRealizado = totalJurosPrevisto * (pctRecebidoEmprestimos || 0);
+
+    const totalLucro = totalLucroProdutos + lucroFinanceiroRealizado;
+    
+    const margemLucro = totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0;
 
     // Produtos mais vendidos
     const produtosVendidos = vendasConcluidas.reduce((acc, v) => {
-      const existente = acc.find(p => p.produtoId === v.produtoId);
-      const produto = produtos.find(p => p.id === v.produtoId);
-      const lucro = produto ? (v.precoUnitario - produto.precoCusto) * v.quantidade : 0;
-      
-      if (existente) {
-        existente.quantidadeVendida += v.quantidade;
-        existente.lucroTotal += lucro;
-      } else {
-        acc.push({
-          produtoId: v.produtoId,
-          produtoNome: v.produtoNome,
-          quantidadeVendida: v.quantidade,
-          lucroTotal: lucro,
-          margemLucro: produto ? ((v.precoUnitario - produto.precoCusto) / v.precoUnitario) * 100 : 0,
-        });
-      }
+      v.itens?.forEach(item => {
+        const existente = acc.find(p => p.produtoId === item.produtoId);
+        const produto = produtos.find(p => p.id === item.produtoId);
+        const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+        
+        if (existente) {
+          existente.quantidadeVendida += item.quantidade;
+          existente.lucroTotal += lucro;
+        } else {
+          acc.push({
+            produtoId: item.produtoId,
+            produtoNome: item.produtoNome,
+            quantidadeVendida: item.quantidade,
+            lucroTotal: lucro,
+            margemLucro: item.precoUnitario > 0 ? (lucro / (item.quantidade * item.precoUnitario)) * 100 : 0,
+          });
+        }
+      });
       return acc;
     }, [] as { produtoId: string; produtoNome: string; quantidadeVendida: number; lucroTotal: number; margemLucro: number }[]);
 
@@ -90,19 +126,22 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
     // Dados para gráfico de vendas por categoria
     const vendasPorCategoria = vendasConcluidas.reduce((acc, v) => {
-      const produto = produtos.find(p => p.id === v.produtoId);
-      if (!produto) return acc;
-      
-      const existente = acc.find(c => c.name === categorias[produto.categoria].label);
-      if (existente) {
-        existente.value += v.valorTotal;
-      } else {
-        acc.push({
-          name: categorias[produto.categoria].label,
-          value: v.valorTotal,
-          color: categorias[produto.categoria].cor.replace('bg-', '#')
-        });
-      }
+      v.itens?.forEach(item => {
+        const produto = produtos.find(p => p.id === item.produtoId);
+        if (!produto) return;
+        
+        const valorItem = item.quantidade * item.precoUnitario;
+        const existente = acc.find(c => c.name === categorias[produto.categoria].label);
+        if (existente) {
+          existente.value += valorItem;
+        } else {
+          acc.push({
+            name: categorias[produto.categoria].label,
+            value: valorItem,
+            color: categorias[produto.categoria].cor.replace('bg-', '#')
+          });
+        }
+      });
       return acc;
     }, [] as { name: string; value: number; color: string }[]);
 
@@ -136,16 +175,21 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
     // Status de pagamento
     const statusPagamento = [
-      { name: 'Pago', value: totalRecebido },
+      { name: 'Pago', value: totalRecebidoGeral },
       { name: 'Pendente', value: totalPendente },
     ];
 
     return {
-      totalVendas,
-      totalRecebido,
+      totalVendasProduto,
+      totalRecebidoProduto,
+      totalEmprestado,
+      totalJurosPrevisto,
+      totalReceita,
+      totalRecebidoGeral,
       totalPendente,
       totalLucro,
       margemLucro,
+      lucroFinanceiroRealizado,
       vendasHoje: vendasHoje.reduce((sum, v) => sum + v.valorTotal, 0),
       vendasSemana: vendasSemana.reduce((sum, v) => sum + v.valorTotal, 0),
       vendasMes: vendasMes.reduce((sum, v) => sum + v.valorTotal, 0),
@@ -157,19 +201,19 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
       pagamentosPorForma,
       statusPagamento,
     };
-  }, [produtos, vendas]);
+  }, [produtos, vendas, emprestimos]);
 
   const cards = [
     {
       titulo: 'Total em Vendas',
-      valor: formatarMoeda(dados.totalVendas),
+      valor: formatarMoeda(dados.totalReceita),
       icone: DollarSign,
       cor: 'text-blue-600',
       bgCor: 'bg-blue-100',
     },
     {
       titulo: 'Total Recebido',
-      valor: formatarMoeda(dados.totalRecebido),
+      valor: formatarMoeda(dados.totalRecebidoGeral),
       icone: TrendingUp,
       cor: 'text-green-600',
       bgCor: 'bg-green-100',
@@ -221,16 +265,42 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
 
       {/* Cards por Período */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        {cardsPeriodo.map((card, index) => (
-          <Card key={index} className="bg-gradient-to-br from-gray-50 to-white">
-            <CardHeader className="pb-1 sm:pb-2 px-4 py-3 sm:px-6 sm:py-4">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Vendas {card.titulo}</CardTitle>
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700">Vendas Totais</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
-            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
-              <div className="text-base sm:text-xl font-bold text-gray-900">{card.valor}</div>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-900">{formatarMoeda(dados.totalVendasProduto)}</div>
+              <p className="text-xs text-blue-600 mt-1">
+                {vendas.filter(v => new Date(v.dataVenda).getMonth() === new Date().getMonth()).length} vendas este mês
+              </p>
             </CardContent>
           </Card>
-        ))}
+
+          <Card className="bg-gradient-to-br from-green-50 to-white border-green-100">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">Valor Recebido</CardTitle>
+              <Wallet className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-900">{formatarMoeda(dados.totalRecebidoProduto)}</div>
+              <div className="w-full bg-green-200 h-1.5 rounded-full mt-2">
+                <div 
+                  className="bg-green-600 h-1.5 rounded-full transition-all" 
+                  style={{ width: `${dados.totalVendasProduto > 0 ? (dados.totalRecebidoProduto / dados.totalVendasProduto) * 100 : 0}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        <Card className="bg-gradient-to-br from-gray-50 to-white">
+            <CardHeader className="pb-1 sm:pb-2 px-4 py-3 sm:px-6 sm:py-4">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">Vendas {cardsPeriodo[2].titulo}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0">
+              <div className="text-base sm:text-xl font-bold text-gray-900">{cardsPeriodo[2].valor}</div>
+            </CardContent>
+          </Card>
       </div>
 
       {/* Gráficos */}
@@ -397,7 +467,7 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
                   <div key={venda.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-orange-50 rounded-lg border border-orange-100 gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{venda.clienteNome}</p>
-                      <p className="text-xs text-gray-500 truncate">{venda.produtoNome}</p>
+                      <p className="text-xs text-gray-500 truncate">{venda.itens?.map(i => i.produtoNome).join(', ')}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold text-orange-600 text-sm sm:text-base">
@@ -441,7 +511,7 @@ export function Dashboard({ produtos, vendas }: DashboardProps) {
                     <tr key={venda.id} className="border-b hover:bg-gray-50">
                       <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm whitespace-nowrap">{formatarData(venda.dataVenda)}</td>
                       <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium max-w-[100px] sm:max-w-none truncate">{venda.clienteNome}</td>
-                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm max-w-[80px] sm:max-w-none truncate">{venda.produtoNome}</td>
+                      <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm max-w-[80px] sm:max-w-none truncate">{venda.itens?.map(i => i.produtoNome).join(', ')}</td>
                       <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm text-right font-semibold whitespace-nowrap">{formatarMoeda(venda.valorTotal)}</td>
                       <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${

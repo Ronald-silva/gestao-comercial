@@ -4,16 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, Download } from 'lucide-react';
 import { formatarMoeda, formatarData, formatarDataHora, gerarNumeroRecibo, formasPagamento } from '@/lib/utils';
-import type { Venda, Produto } from '@/types';
+import type { Venda } from '@/types';
 
 interface ReciboProps {
   venda: Venda | null;
-  produto: Produto | null;
   aberto: boolean;
   onFechar: () => void;
 }
 
-export function Recibo({ venda, produto, aberto, onFechar }: ReciboProps) {
+export function Recibo({ venda, aberto, onFechar }: ReciboProps) {
   const reciboRef = useRef<HTMLDivElement>(null);
 
   if (!venda) return null;
@@ -79,7 +78,8 @@ export function Recibo({ venda, produto, aberto, onFechar }: ReciboProps) {
     URL.revokeObjectURL(url);
   };
 
-  const lucro = produto ? (venda.precoUnitario - produto.precoCusto) * venda.quantidade : 0;
+  // Lucro removido temporariamente
+  // const lucro = produto ? (venda.precoUnitario - produto.precoCusto) * venda.quantidade : 0;
 
   return (
     <Dialog open={aberto} onOpenChange={onFechar}>
@@ -137,12 +137,14 @@ export function Recibo({ venda, produto, aberto, onFechar }: ReciboProps) {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="py-3 text-gray-900">{venda.produtoNome}</td>
-                  <td className="py-3 text-center text-gray-900">{venda.quantidade}</td>
-                  <td className="py-3 text-right text-gray-900">{formatarMoeda(venda.precoUnitario)}</td>
-                  <td className="py-3 text-right font-semibold text-gray-900">{formatarMoeda(venda.valorTotal)}</td>
-                </tr>
+                {venda.itens.map((item, idx) => (
+                  <tr key={idx} className="border-b border-gray-100 last:border-0">
+                    <td className="py-3 text-gray-900">{item.produtoNome}</td>
+                    <td className="py-3 text-center text-gray-900">{item.quantidade}</td>
+                    <td className="py-3 text-right text-gray-900">{formatarMoeda(item.precoUnitario)}</td>
+                    <td className="py-3 text-right font-semibold text-gray-900">{formatarMoeda(item.quantidade * item.precoUnitario)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -214,28 +216,7 @@ export function Recibo({ venda, produto, aberto, onFechar }: ReciboProps) {
             )}
           </div>
 
-          {/* Informações Internas (não aparecem no recibo do cliente) */}
-          {produto && (
-            <div className="border-t-2 border-dashed border-gray-300 pt-4 mt-6">
-              <p className="text-xs text-gray-400 text-center uppercase tracking-wider mb-2">Informações Internas</p>
-              <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                <div>
-                  <p className="text-gray-500">Custo</p>
-                  <p className="font-medium text-gray-700">{formatarMoeda(produto.precoCusto * venda.quantidade)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Lucro</p>
-                  <p className="font-medium text-green-600">{formatarMoeda(lucro)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Margem</p>
-                  <p className="font-medium text-gray-700">
-                    {((lucro / venda.valorTotal) * 100).toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Informações Internas (Removido temporariamente para suporte a múltiplos itens) */}
 
           {/* Rodapé */}
           <div className="text-center mt-8 pt-6 border-t border-gray-300">

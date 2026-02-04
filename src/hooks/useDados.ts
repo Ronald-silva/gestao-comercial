@@ -1,10 +1,11 @@
 import { useLocalStorage } from './useStorage';
-import type { Produto, Venda, Cliente, StatusPagamento } from '@/types';
+import type { Produto, Venda, Cliente, StatusPagamento, Emprestimo, Pagamento } from '@/types';
 
 export function useDados() {
   const [produtos, setProdutos] = useLocalStorage<Produto[]>('produtos', []);
   const [vendas, setVendas] = useLocalStorage<Venda[]>('vendas', []);
   const [clientes, setClientes] = useLocalStorage<Cliente[]>('clientes', []);
+  const [emprestimos, setEmprestimos] = useLocalStorage<Emprestimo[]>('emprestimos', []);
 
   // Gerar ID único
   const gerarId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -58,6 +59,12 @@ export function useDados() {
       valorTotal: venda.valorTotal,
       valorRecebido: venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix' ? venda.valorTotal : 0,
       parcelas,
+      lancamentos: (venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix') ? [{
+        id: gerarId(),
+        valor: venda.valorTotal,
+        data: new Date().toISOString().split('T')[0],
+        observacao: 'Pagamento à vista (Criação)'
+      }] : [],
       status: (venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix' ? 'pago' : 'pendente') as StatusPagamento,
     };
 
@@ -70,12 +77,14 @@ export function useDados() {
 
     setVendas(prev => [novaVenda, ...prev]);
 
-    // CONTROLE DE ESTOQUE: Diminuir quantidade do produto vendido
-    setProdutos(prev => prev.map(p => 
-      p.id === venda.produtoId 
-        ? { ...p, quantidade: Math.max(0, p.quantidade - venda.quantidade) }
-        : p
-    ));
+    // CONTROLE DE ESTOQUE: Diminuir quantidade dos produtos vendidos
+    setProdutos(prev => prev.map(p => {
+      const itemVenda = venda.itens.find(i => i.produtoId === p.id);
+      if (itemVenda) {
+        return { ...p, quantidade: Math.max(0, p.quantidade - itemVenda.quantidade) };
+      }
+      return p;
+    }));
 
     // Atualizar ou criar cliente
     const clienteExistente = clientes.find(c => c.nome.toLowerCase() === venda.clienteNome.toLowerCase());
@@ -115,35 +124,109 @@ export function useDados() {
 
   const getVendaById = (id: string) => vendas.find(v => v.id === id);
 
-  // PAGAMENTOS
-  const registrarPagamento = (vendaId: string, parcelaNumero?: number) => {
+  // EMPRESTIMOS
+  const adicionarEmprestimo = (dados: Omit<Emprestimo, 'id' | 'criadoEm' | 'pagamento' | 'taxaJuros' | 'valorTotal'>) => {
+    const id = gerarId();
+    const taxaJuros = 0.10; // 10%
+    const valorTotal = dados.valorSolicitado * (1 + taxaJuros);
+    
+    // Pagamento inicial zerado
+    const pagamento: Pagamento = {
+      id: gerarId(),
+      vendaId: id, // Usando mesmo campo de link ID
+      formaPagamento: 'dinheiro', // Default, mas irrelevante aqui
+      valorTotal: valorTotal,
+      valorRecebido: 0,
+      lancamentos: [],
+      status: 'pendente'
+    };
+
+    const novoEmprestimo: Emprestimo = {
+      ...dados,
+      id,
+      taxaJuros,
+      valorTotal,
+      pagamento,
+      criadoEm: new Date().toISOString(),
+      status: 'pendente'
+    };
+
+    setEmprestimos(prev => [novoEmprestimo, ...prev]);
+    return novoEmprestimo;
+  };
+
+  const registrarPagamentoEmprestimo = (emprestimoId: string, valor: number, data: string, observacao?: string) => {
+    setEmprestimos(prev => prev.map(e => {
+      if (e.id !== emprestimoId) return e;
+
+      const novoPagamento = { ...e.pagamento };
+      
+      novoPagamento.lancamentos = [...novoPagamento.lancamentos, {
+        id: gerarId(),
+        valor,
+        data,
+        observacao
+      }];
+      
+      novoPagamento.valorRecebido += valor;
+      
+      if (novoPagamento.valorRecebido >= novoPagamento.valorTotal - 0.01) {
+        novoPagamento.status = 'pago';
+        novoPagamento.valorRecebido = novoPagamento.valorTotal;
+      }
+
+      return { ...e, pagamento: novoPagamento, status: novoPagamento.status === 'pago' ? 'pago' : 'pendente' };
+    }));
+  };
+
+  const removerEmprestimo = (id: string) => {
+    setEmprestimos(prev => prev.filter(e => e.id !== id));
+  };
+
+  // PAGAMENTOS (Vendas)
+  const registrarPagamento = (vendaId: string, valor: number, data: string, observacao?: string) => {
     setVendas(prev => prev.map(v => {
       if (v.id !== vendaId) return v;
 
       const novoPagamento = { ...v.pagamento };
       
-      if (parcelaNumero !== undefined && novoPagamento.parcelas) {
-        novoPagamento.parcelas = novoPagamento.parcelas.map(p => 
-          p.numero === parcelaNumero 
-            ? { ...p, pago: true, dataPagamento: new Date().toISOString().split('T')[0] }
-            : p
-        );
-        const totalRecebido = novoPagamento.parcelas.filter(p => p.pago).reduce((sum, p) => sum + p.valor, 0);
-        novoPagamento.valorRecebido = totalRecebido;
-        novoPagamento.status = totalRecebido >= novoPagamento.valorTotal ? 'pago' : 'parcial';
-      } else {
-        novoPagamento.valorRecebido = novoPagamento.valorTotal;
+      // Adicionar lançamento
+      const novoLancamento = {
+        id: gerarId(),
+        valor,
+        data,
+        observacao
+      };
+      
+      novoPagamento.lancamentos = [...(novoPagamento.lancamentos || []), novoLancamento];
+      novoPagamento.valorRecebido += valor;
+
+      // Atualizar Status Geral
+      if (novoPagamento.valorRecebido >= novoPagamento.valorTotal - 0.01) { // margem de erro float
         novoPagamento.status = 'pago';
-        if (novoPagamento.parcelas) {
-          novoPagamento.parcelas = novoPagamento.parcelas.map(p => ({ 
-            ...p, 
-            pago: true, 
-            dataPagamento: new Date().toISOString().split('T')[0] 
-          }));
-        }
+        novoPagamento.valorRecebido = novoPagamento.valorTotal; // Arredondar para evitar 99.999
+      } else {
+        novoPagamento.status = 'parcial';
       }
 
-      return { ...v, pagamento: novoPagamento, status: novoPagamento.status === 'pago' ? 'concluida' : v.status };
+      // Atualizar Status das Parcelas (Lógica de Abatimento)
+      if (novoPagamento.parcelas) {
+        let valorParaAbater = novoPagamento.valorRecebido;
+        
+        novoPagamento.parcelas = novoPagamento.parcelas.map(p => {
+          if (valorParaAbater >= p.valor - 0.01) {
+            valorParaAbater -= p.valor;
+            return { ...p, pago: true, dataPagamento: p.dataPagamento || data };
+          } else {
+            // Parcela não paga totalmente
+            // Poderíamos marcar como parcial aqui, mas o tipo Parcela só tem boolean 'pago'.
+            // Mantemos false, mas o sistema sabe que tem valor recebido geral.
+            return { ...p, pago: false };
+          }
+        });
+      }
+
+      return { ...v, pagamento: novoPagamento, status: novoPagamento.status === 'pago' ? 'concluida' : 'pendente' };
     }));
   };
 
@@ -161,7 +244,7 @@ export function useDados() {
           vendaId: v.id,
           clienteNome: v.clienteNome,
           clienteContato: v.clienteContato,
-          produtoNome: v.produtoNome,
+          produtoNome: v.itens.map(i => `${i.quantidade}x ${i.produtoNome}`).join(', '),
           valorPendente: v.pagamento.valorTotal - v.pagamento.valorRecebido,
           dataVencimento: parcelaMaisProxima?.dataVencimento,
           diasAtraso: parcelaMaisProxima ? Math.floor((new Date(hoje).getTime() - new Date(parcelaMaisProxima.dataVencimento).getTime()) / (1000 * 60 * 60 * 24)) : 0,
@@ -181,11 +264,31 @@ export function useDados() {
     setClientes(prev => prev.filter(c => c.id !== id));
   };
 
+  // LIMPEZA DE DADOS
+  const limparDados = () => {
+    localStorage.removeItem('sge_produtos');
+    localStorage.removeItem('sge_vendas');
+    localStorage.removeItem('sge_clientes');
+    localStorage.removeItem('sge_emprestimos');
+    // Para compatibilidade
+    localStorage.removeItem('produtos');
+    localStorage.removeItem('vendas');
+    localStorage.removeItem('clientes');
+    localStorage.removeItem('emprestimos');
+    
+    setProdutos([]);
+    setVendas([]);
+    setClientes([]);
+    setEmprestimos([]);
+    window.location.reload(); 
+  };
+
   return {
     // Dados
     produtos,
     vendas,
     clientes,
+    emprestimos,
     // Produtos
     adicionarProduto,
     atualizarProduto,
@@ -200,8 +303,14 @@ export function useDados() {
     // Pagamentos
     registrarPagamento,
     getContasAReceber,
+    // Emprestimos
+    adicionarEmprestimo,
+    registrarPagamentoEmprestimo,
+    removerEmprestimo,
     // Clientes
     atualizarCliente,
     removerCliente,
+    // Sistema
+    limparDados
   };
 }
