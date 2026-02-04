@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Printer, Download } from 'lucide-react';
 import { formatarMoeda, formatarData, formatarDataHora, gerarNumeroRecibo, formasPagamento } from '@/lib/utils';
 import type { Venda } from '@/types';
@@ -98,6 +98,9 @@ export function Recibo({ venda, aberto, onFechar }: ReciboProps) {
               </Button>
             </div>
           </DialogTitle>
+          <DialogDescription>
+            Visualize, imprima ou baixe o recibo desta venda.
+          </DialogDescription>
         </DialogHeader>
 
         <div ref={reciboRef} className="bg-white p-8 border-2 border-gray-200 rounded-lg">

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Unused
@@ -145,6 +145,9 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Novo Empréstimo</DialogTitle>
+            <DialogDescription>
+              Registre um novo empréstimo com taxa de 10% de juros.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -218,6 +221,9 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Gerenciar Pagamento</DialogTitle>
+            <DialogDescription>
+              Registre pagamentos e visualize o histórico do empréstimo.
+            </DialogDescription>
           </DialogHeader>
           {modalPagamento && (
             <div className="space-y-6">
