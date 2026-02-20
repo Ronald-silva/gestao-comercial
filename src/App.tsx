@@ -10,9 +10,12 @@ import { Relatorios } from '@/sections/Relatorios';
 import { ExportarDados } from '@/components/ExportarDados';
 import { LembretesContas } from '@/components/LembretesContas';
 import { AlertaEstoque } from '@/components/AlertaEstoque';
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, Receipt, HandCoins } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, Receipt, HandCoins, Wallet, ShoppingBag, Target } from 'lucide-react';
 import type { Venda } from '@/types';
 import { Emprestimos } from '@/sections/Emprestimos';
+import { Caixa } from '@/sections/Caixa';
+import { Compras } from '@/sections/Compras';
+import { MetaReinvestimento } from '@/sections/MetaReinvestimento';
 
 function App() {
   const {
@@ -28,6 +31,19 @@ function App() {
     emprestimos,
     adicionarEmprestimo,
     registrarPagamentoEmprestimo,
+    movimentacoes,
+    adicionarMovimentacao,
+    removerMovimentacao,
+    getSaldoCaixa,
+    compras,
+    adicionarCompra,
+    removerCompra,
+    getTotalInvestidoEstoque,
+    metas,
+    adicionarMeta,
+    removerMeta,
+    getMetaAtiva,
+    getProgressoMeta,
   } = useDados();
 
   const [reciboVenda, setReciboVenda] = useState<Venda | null>(null);
@@ -66,6 +82,21 @@ function App() {
   const handlePagamentoEmprestimo = (id: string, valor: number, data: string, obs?: string) => {
     registrarPagamentoEmprestimo(id, valor, data, obs);
     toast.success('Baixa registrada com sucesso!');
+  };
+
+  const handleAdicionarMovimentacao = (dados: Parameters<typeof adicionarMovimentacao>[0]) => {
+    adicionarMovimentacao(dados);
+    toast.success('Movimentação registrada!');
+  };
+
+  const handleAdicionarCompra = (dados: Parameters<typeof adicionarCompra>[0]) => {
+    adicionarCompra(dados);
+    toast.success('Compra registrada! Estoque e caixa atualizados.');
+  };
+
+  const handleAdicionarMeta = (dados: Parameters<typeof adicionarMeta>[0]) => {
+    adicionarMeta(dados);
+    toast.success('Meta de reinvestimento definida!');
   };
 
   const handleVerRecibo = (venda: Venda) => {
@@ -123,26 +154,38 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full bg-white p-1.5 sm:p-1 rounded-xl shadow-sm h-auto gap-1">
-            <TabsTrigger value="dashboard" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 min-h-[44px]">
+          <TabsList className="grid grid-cols-4 sm:grid-cols-8 w-full bg-white p-1.5 rounded-xl shadow-sm h-auto gap-1">
+            <TabsTrigger value="dashboard" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 min-h-[52px] rounded-lg w-full">
               <LayoutDashboard className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span>Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="produtos" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 min-h-[44px]">
+            <TabsTrigger value="produtos" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 min-h-[52px] rounded-lg w-full">
               <Package className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Produtos</span>
+              <span>Produtos</span>
             </TabsTrigger>
-            <TabsTrigger value="vendas" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-green-100 data-[state=active]:text-green-700 min-h-[44px]">
+            <TabsTrigger value="vendas" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-green-100 data-[state=active]:text-green-700 min-h-[52px] rounded-lg w-full">
               <ShoppingCart className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Vendas</span>
+              <span>Vendas</span>
             </TabsTrigger>
-            <TabsTrigger value="relatorios" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 min-h-[44px]">
+            <TabsTrigger value="compras" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-cyan-100 data-[state=active]:text-cyan-700 min-h-[52px] rounded-lg w-full">
+              <ShoppingBag className="h-4 w-4 shrink-0" />
+              <span>Compras</span>
+            </TabsTrigger>
+            <TabsTrigger value="caixa" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-teal-100 data-[state=active]:text-teal-700 min-h-[52px] rounded-lg w-full">
+              <Wallet className="h-4 w-4 shrink-0" />
+              <span>Caixa</span>
+            </TabsTrigger>
+            <TabsTrigger value="metas" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 min-h-[52px] rounded-lg w-full">
+              <Target className="h-4 w-4 shrink-0" />
+              <span>Metas</span>
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 min-h-[52px] rounded-lg w-full">
               <BarChart3 className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Relatórios</span>
+              <span>Relatórios</span>
             </TabsTrigger>
-            <TabsTrigger value="emprestimos" className="flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-2 text-xs sm:text-sm data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 min-h-[44px]">
+            <TabsTrigger value="emprestimos" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 min-h-[52px] rounded-lg w-full">
               <HandCoins className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Empréstimos</span>
+              <span>Emprést.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -166,6 +209,38 @@ function App() {
               onAdicionar={handleAdicionarVenda}
               onRegistrarPagamento={handleRegistrarPagamento}
               onVerRecibo={handleVerRecibo}
+            />
+          </TabsContent>
+
+          <TabsContent value="compras" className="mt-6">
+            <Compras
+              compras={compras}
+              produtos={produtos}
+              onAdicionar={handleAdicionarCompra}
+              onRemover={removerCompra}
+              getTotalInvestidoEstoque={getTotalInvestidoEstoque}
+            />
+          </TabsContent>
+
+          <TabsContent value="caixa" className="mt-6">
+            <Caixa
+              movimentacoes={movimentacoes}
+              vendas={vendas}
+              onAdicionar={handleAdicionarMovimentacao}
+              onRemover={removerMovimentacao}
+              getSaldoCaixa={getSaldoCaixa}
+            />
+          </TabsContent>
+
+          <TabsContent value="metas" className="mt-6">
+            <MetaReinvestimento
+              metas={metas}
+              vendas={vendas}
+              compras={compras}
+              onAdicionar={handleAdicionarMeta}
+              onRemover={removerMeta}
+              getMetaAtiva={getMetaAtiva}
+              getProgressoMeta={getProgressoMeta}
             />
           </TabsContent>
 

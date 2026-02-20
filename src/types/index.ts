@@ -121,3 +121,66 @@ export interface Emprestimo {
   observacoes?: string;
   criadoEm: string;
 }
+
+// ============================================================
+// CAIXA (Controle de Fluxo de Caixa)
+// ============================================================
+
+export type TipoMovimentacaoCaixa =
+  | 'entrada_venda_pix'
+  | 'entrada_venda_dinheiro'
+  | 'entrada_manual_pix'
+  | 'entrada_manual_dinheiro'
+  | 'saida_compra'
+  | 'saida_saque'
+  | 'saida_despesa';
+
+export interface MovimentacaoCaixa {
+  id: string;
+  tipo: TipoMovimentacaoCaixa;
+  canal: 'pix' | 'dinheiro';
+  direcao: 'entrada' | 'saida';
+  descricao: string;
+  valor: number;
+  data: string;
+  vendaId?: string;
+  compraId?: string;
+  observacoes?: string;
+  criadoEm: string;
+}
+
+// ============================================================
+// COMPRAS (Registro de Compras para Revenda)
+// ============================================================
+
+export interface ItemCompra {
+  produtoId?: string;
+  produtoNome: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface Compra {
+  id: string;
+  fornecedor: string;
+  itens: ItemCompra[];
+  valorTotal: number;
+  data: string;
+  formaPagamento: FormaPagamento;
+  observacoes?: string;
+  criadoEm: string;
+}
+
+// ============================================================
+// META DE REINVESTIMENTO
+// ============================================================
+
+export interface MetaReinvestimento {
+  id: string;
+  percentualMeta: number;
+  periodoInicio: string;
+  periodoFim: string;
+  ativa: boolean;
+  observacoes?: string;
+  criadoEm: string;
+}

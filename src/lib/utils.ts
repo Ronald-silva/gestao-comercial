@@ -88,3 +88,14 @@ export function estaVencida(data: string): boolean {
   dataVenc.setHours(0, 0, 0, 0);
   return dataVenc < hoje;
 }
+
+// Tipos de movimentação do caixa
+export const tiposMovimentacao = {
+  entrada_venda_pix:       { label: 'Venda (PIX)',       canal: 'pix',      direcao: 'entrada', cor: 'text-green-600',  bgCor: 'bg-green-100'  },
+  entrada_venda_dinheiro:  { label: 'Venda (Dinheiro)',  canal: 'dinheiro', direcao: 'entrada', cor: 'text-green-600',  bgCor: 'bg-green-100'  },
+  entrada_manual_pix:      { label: 'Entrada PIX',       canal: 'pix',      direcao: 'entrada', cor: 'text-green-600',  bgCor: 'bg-green-100'  },
+  entrada_manual_dinheiro: { label: 'Entrada Dinheiro',  canal: 'dinheiro', direcao: 'entrada', cor: 'text-green-600',  bgCor: 'bg-green-100'  },
+  saida_compra:            { label: 'Compra Estoque',    canal: 'dinheiro', direcao: 'saida',   cor: 'text-blue-600',   bgCor: 'bg-blue-100'   },
+  saida_saque:             { label: 'Saque Pessoal',     canal: 'dinheiro', direcao: 'saida',   cor: 'text-red-600',    bgCor: 'bg-red-100'    },
+  saida_despesa:           { label: 'Despesa',           canal: 'dinheiro', direcao: 'saida',   cor: 'text-orange-600', bgCor: 'bg-orange-100' },
+} as const;

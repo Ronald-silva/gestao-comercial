@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useLocalStorage } from './useStorage';
-import type { Produto, Venda, Cliente, StatusPagamento, Emprestimo, Pagamento } from '@/types';
+import type { Produto, Venda, Cliente, StatusPagamento, Emprestimo, Pagamento, MovimentacaoCaixa, TipoMovimentacaoCaixa, Compra, MetaReinvestimento } from '@/types';
 
 // Função para gerar ID único
 const gerarIdUnico = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -73,6 +73,9 @@ export function useDados() {
   const [vendasRaw, setVendas] = useLocalStorage<Venda[]>('vendas', []);
   const [clientes, setClientes] = useLocalStorage<Cliente[]>('clientes', []);
   const [emprestimosRaw, setEmprestimos] = useLocalStorage<Emprestimo[]>('emprestimos', []);
+  const [movimentacoesRaw, setMovimentacoes] = useLocalStorage<MovimentacaoCaixa[]>('caixa_movimentacoes', []);
+  const [comprasRaw, setCompras] = useLocalStorage<Compra[]>('compras', []);
+  const [metasRaw, setMetas] = useLocalStorage<MetaReinvestimento[]>('metas_reinvestimento', []);
 
   // Validar e filtrar dados corrompidos (memorizado para evitar loop infinito)
   const produtos = useMemo(() =>
@@ -92,6 +95,23 @@ export function useDados() {
       ? emprestimosRaw.map(validarEmprestimo).filter((e): e is Emprestimo => e !== null)
       : [],
     [emprestimosRaw]
+  );
+
+  const movimentacoes = useMemo(() =>
+    Array.isArray(movimentacoesRaw)
+      ? movimentacoesRaw.filter(m => m && m.id && m.tipo)
+      : [],
+    [movimentacoesRaw]
+  );
+
+  const compras = useMemo(() =>
+    Array.isArray(comprasRaw) ? comprasRaw.filter(c => c && c.id) : [],
+    [comprasRaw]
+  );
+
+  const metas = useMemo(() =>
+    Array.isArray(metasRaw) ? metasRaw.filter(m => m && m.id) : [],
+    [metasRaw]
   );
 
   // Gerar ID único (usa função externa)
@@ -351,6 +371,113 @@ export function useDados() {
     setClientes(prev => prev.filter(c => c.id !== id));
   };
 
+  // CAIXA
+  const adicionarMovimentacao = (dados: Omit<MovimentacaoCaixa, 'id' | 'criadoEm'>) => {
+    const nova: MovimentacaoCaixa = { ...dados, id: gerarId(), criadoEm: new Date().toISOString() };
+    setMovimentacoes(prev => [nova, ...prev]);
+    return nova;
+  };
+
+  const removerMovimentacao = (id: string) => {
+    setMovimentacoes(prev => prev.filter(m => m.id !== id));
+  };
+
+  const getSaldoCaixa = () => {
+    const saldoPix = movimentacoes
+      .filter(m => m.canal === 'pix')
+      .reduce((sum, m) => m.direcao === 'entrada' ? sum + m.valor : sum - m.valor, 0);
+    const saldoDinheiro = movimentacoes
+      .filter(m => m.canal === 'dinheiro')
+      .reduce((sum, m) => m.direcao === 'entrada' ? sum + m.valor : sum - m.valor, 0);
+    return { saldoPix, saldoDinheiro, saldoTotal: saldoPix + saldoDinheiro };
+  };
+
+  // COMPRAS
+  const adicionarCompra = (dados: Omit<Compra, 'id' | 'criadoEm'>) => {
+    const novaCompra: Compra = { ...dados, id: gerarId(), criadoEm: new Date().toISOString() };
+    setCompras(prev => [novaCompra, ...prev]);
+
+    // Atualizar estoque dos produtos vinculados
+    dados.itens.forEach(item => {
+      if (item.produtoId) {
+        setProdutos(prev => prev.map(p =>
+          p.id === item.produtoId
+            ? { ...p, quantidade: p.quantidade + item.quantidade }
+            : p
+        ));
+      }
+    });
+
+    // Auto-criar saída no Caixa
+    const canal: 'pix' | 'dinheiro' = dados.formaPagamento === 'pix' ? 'pix' : 'dinheiro';
+    const movSaida: Omit<MovimentacaoCaixa, 'id' | 'criadoEm'> = {
+      tipo: 'saida_compra' as TipoMovimentacaoCaixa,
+      canal,
+      direcao: 'saida',
+      descricao: `Compra: ${dados.fornecedor}`,
+      valor: dados.valorTotal,
+      data: dados.data,
+      compraId: novaCompra.id,
+    };
+    const movId = gerarId();
+    setMovimentacoes(prev => [{ ...movSaida, id: movId, criadoEm: new Date().toISOString() }, ...prev]);
+
+    return novaCompra;
+  };
+
+  const removerCompra = (id: string) => {
+    setCompras(prev => prev.filter(c => c.id !== id));
+    setMovimentacoes(prev => prev.filter(m => m.compraId !== id));
+  };
+
+  const getTotalInvestidoEstoque = () =>
+    compras.reduce((sum, c) => sum + c.valorTotal, 0);
+
+  // METAS DE REINVESTIMENTO
+  const adicionarMeta = (dados: Omit<MetaReinvestimento, 'id' | 'criadoEm'>) => {
+    if (dados.ativa) {
+      setMetas(prev => prev.map(m => ({ ...m, ativa: false })));
+    }
+    const nova: MetaReinvestimento = { ...dados, id: gerarId(), criadoEm: new Date().toISOString() };
+    setMetas(prev => [nova, ...prev]);
+    return nova;
+  };
+
+  const removerMeta = (id: string) => {
+    setMetas(prev => prev.filter(m => m.id !== id));
+  };
+
+  const getMetaAtiva = () => metas.find(m => m.ativa) || null;
+
+  const getProgressoMeta = (meta: MetaReinvestimento) => {
+    const receitaPeriodo = vendas
+      .filter(v =>
+        v.status !== 'cancelada' &&
+        v.dataVenda >= meta.periodoInicio &&
+        v.dataVenda <= meta.periodoFim
+      )
+      .reduce((sum, v) => sum + v.valorTotal, 0);
+
+    const valorMeta = receitaPeriodo * (meta.percentualMeta / 100);
+
+    const reinvestidoPeriodo = compras
+      .filter(c => c.data >= meta.periodoInicio && c.data <= meta.periodoFim)
+      .reduce((sum, c) => sum + c.valorTotal, 0);
+
+    const percentualRealizado = valorMeta > 0
+      ? Math.min(100, (reinvestidoPeriodo / valorMeta) * 100)
+      : 0;
+
+    return {
+      receitaPeriodo,
+      valorMeta,
+      reinvestidoPeriodo,
+      percentualRealizado,
+      atingida: reinvestidoPeriodo >= valorMeta,
+      faltando: Math.max(0, valorMeta - reinvestidoPeriodo),
+    };
+  };
+
   // LIMPEZA DE DADOS
   const limparDados = () => {
     localStorage.removeItem('sge_produtos');
@@ -362,12 +489,18 @@ export function useDados() {
     localStorage.removeItem('vendas');
     localStorage.removeItem('clientes');
     localStorage.removeItem('emprestimos');
-    
+    localStorage.removeItem('caixa_movimentacoes');
+    localStorage.removeItem('compras');
+    localStorage.removeItem('metas_reinvestimento');
+
     setProdutos([]);
     setVendas([]);
     setClientes([]);
     setEmprestimos([]);
-    window.location.reload(); 
+    setMovimentacoes([]);
+    setCompras([]);
+    setMetas([]);
+    window.location.reload();
   };
 
   return {
@@ -397,6 +530,22 @@ export function useDados() {
     // Clientes
     atualizarCliente,
     removerCliente,
+    // Caixa
+    movimentacoes,
+    adicionarMovimentacao,
+    removerMovimentacao,
+    getSaldoCaixa,
+    // Compras
+    compras,
+    adicionarCompra,
+    removerCompra,
+    getTotalInvestidoEstoque,
+    // Metas de Reinvestimento
+    metas,
+    adicionarMeta,
+    removerMeta,
+    getMetaAtiva,
+    getProgressoMeta,
     // Sistema
     limparDados
   };
