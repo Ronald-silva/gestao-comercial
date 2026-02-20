@@ -203,10 +203,11 @@ function App() {
           </TabsContent>
 
           <TabsContent value="vendas" className="mt-6">
-            <Vendas 
+            <Vendas
               produtos={produtos}
               vendas={vendas}
               onAdicionar={handleAdicionarVenda}
+              onAdicionarEmprestimo={handleAdicionarEmprestimo}
               onRegistrarPagamento={handleRegistrarPagamento}
               onVerRecibo={handleVerRecibo}
             />

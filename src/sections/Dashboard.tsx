@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Package, 
+import { Badge } from '@/components/ui/badge';
+import {
+  TrendingUp,
+  DollarSign,
+  Package,
   AlertCircle,
   Wallet,
-  ShoppingCart
+  ShoppingCart,
+  Users
 } from 'lucide-react';
 import { formatarMoeda, formatarData, categorias } from '@/lib/utils';
 import type { Produto, Venda, Emprestimo } from '@/types';
@@ -125,6 +127,25 @@ export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
       .filter(v => v.pagamento.status !== 'pago')
       .slice(0, 5);
 
+    // Devedores consolidados por cliente (vendas + empréstimos)
+    const devedoresMap: Record<string, { nome: string; devidoVendas: number; devidoEmprestimos: number }> = {};
+    vendasConcluidas.filter(v => v.pagamento.status !== 'pago').forEach(v => {
+      const pendente = v.pagamento.valorTotal - v.pagamento.valorRecebido;
+      if (pendente > 0.01) {
+        if (!devedoresMap[v.clienteNome]) devedoresMap[v.clienteNome] = { nome: v.clienteNome, devidoVendas: 0, devidoEmprestimos: 0 };
+        devedoresMap[v.clienteNome].devidoVendas += pendente;
+      }
+    });
+    emprestimos.filter(e => e.status !== 'pago').forEach(e => {
+      const pendente = (e?.valorTotal || 0) - (e?.pagamento?.valorRecebido || 0);
+      if (pendente > 0.01) {
+        if (!devedoresMap[e.clienteNome]) devedoresMap[e.clienteNome] = { nome: e.clienteNome, devidoVendas: 0, devidoEmprestimos: 0 };
+        devedoresMap[e.clienteNome].devidoEmprestimos += pendente;
+      }
+    });
+    const devedoresPorCliente = Object.values(devedoresMap)
+      .sort((a, b) => (b.devidoVendas + b.devidoEmprestimos) - (a.devidoVendas + a.devidoEmprestimos));
+
     // Dados para gráfico de vendas por categoria
     const vendasPorCategoria = vendasConcluidas.reduce((acc, v) => {
       v.itens?.forEach(item => {
@@ -201,6 +222,7 @@ export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
       evolucaoVendas,
       pagamentosPorForma,
       statusPagamento,
+      devedoresPorCliente,
     };
   }, [produtos, vendas, emprestimos]);
 
@@ -483,6 +505,54 @@ export function Dashboard({ produtos, vendas, emprestimos }: DashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Devedores por Cliente — visão consolidada */}
+      {dados.devedoresPorCliente.length > 0 && (
+        <Card className="border-rose-200">
+          <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-rose-700">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              O Que Cada Cliente Deve (Total)
+            </CardTitle>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Soma de vendas pendentes + empréstimos em aberto por cliente
+            </p>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="space-y-2">
+              {dados.devedoresPorCliente.map((devedor) => {
+                const total = devedor.devidoVendas + devedor.devidoEmprestimos;
+                return (
+                  <div key={devedor.nome} className="flex items-center justify-between p-3 bg-rose-50 rounded-lg border border-rose-100 gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{devedor.nome}</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {devedor.devidoVendas > 0 && (
+                          <Badge className="bg-orange-100 text-orange-700 border-0 text-xs">
+                            Vendas: {formatarMoeda(devedor.devidoVendas)}
+                          </Badge>
+                        )}
+                        {devedor.devidoEmprestimos > 0 && (
+                          <Badge className="bg-indigo-100 text-indigo-700 border-0 text-xs">
+                            Empréstimo: {formatarMoeda(devedor.devidoEmprestimos)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-rose-700 text-base">{formatarMoeda(total)}</p>
+                      <p className="text-xs text-gray-400">total em aberto</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 border-t pt-2">
+              💡 Para abater: vá em <strong>Vendas</strong> ou <strong>Empréstimos</strong>, encontre o registro da cliente e clique em <strong>"Registrar Pagamento"</strong>.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Vendas Recentes - scroll horizontal no mobile */}
       <Card>

@@ -8,19 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Eye, Receipt, CheckCircle, Trash2, ShoppingCart } from 'lucide-react';
+import { Plus, Search, Eye, Receipt, CheckCircle, Trash2, ShoppingCart, HandCoins } from 'lucide-react';
 import { formatarMoeda, formatarData, statusPagamento } from '@/lib/utils';
-import type { Produto, Venda, FormaPagamento, ItemVenda } from '@/types';
+import type { Produto, Venda, Emprestimo, FormaPagamento, ItemVenda } from '@/types';
 
 interface VendasProps {
   produtos: Produto[];
   vendas: Venda[];
   onAdicionar: (venda: Omit<Venda, 'id' | 'criadoEm' | 'pagamento'>) => void;
+  onAdicionarEmprestimo: (dados: Omit<Emprestimo, 'id' | 'criadoEm' | 'pagamento' | 'taxaJuros' | 'valorTotal'>) => void;
   onRegistrarPagamento: (vendaId: string, valor: number, data: string, obs?: string) => void;
   onVerRecibo: (venda: Venda) => void;
 }
 
-export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, onVerRecibo }: VendasProps) {
+export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, onRegistrarPagamento, onVerRecibo }: VendasProps) {
   const [abaAtiva, setAbaAtiva] = useState('nova');
   
   // Estados para Nova Venda
@@ -37,6 +38,13 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
     formaPagamento: 'pix' as FormaPagamento,
     numeroParcelas: '1',
     observacoes: '',
+  });
+
+  // Estado para empréstimo opcional na mesma transação
+  const [incluirEmprestimo, setIncluirEmprestimo] = useState(false);
+  const [dadosEmprestimo, setDadosEmprestimo] = useState({
+    valorSolicitado: '',
+    dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
 
   // Estados para Histórico
@@ -113,9 +121,26 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
     };
 
     onAdicionar(venda);
-    
+
+    // Se houver empréstimo opcional, registrar também
+    if (incluirEmprestimo && parseFloat(dadosEmprestimo.valorSolicitado) > 0) {
+      onAdicionarEmprestimo({
+        clienteNome: dadosVenda.clienteNome,
+        valorSolicitado: parseFloat(dadosEmprestimo.valorSolicitado),
+        dataEmprestimo: dadosVenda.dataVenda,
+        dataVencimento: dadosEmprestimo.dataVencimento,
+        observacoes: `Empréstimo vinculado à venda de ${dadosVenda.dataVenda}`,
+        status: 'pendente',
+      });
+    }
+
     // Resetar tudo
     setCarrinho([]);
+    setIncluirEmprestimo(false);
+    setDadosEmprestimo({
+      valorSolicitado: '',
+      dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    });
     setDadosVenda({
       clienteNome: '',
       clienteContato: '',
@@ -124,7 +149,7 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
       numeroParcelas: '1',
       observacoes: '',
     });
-    setAbaAtiva('historico'); // Ir para histórico para ver a venda
+    setAbaAtiva('historico');
   };
 
   // --- LÓGICA DO HISTÓRICO ---
@@ -327,12 +352,58 @@ export function Vendas({ produtos, vendas, onAdicionar, onRegistrarPagamento, on
                   
                   <div className="md:col-span-2">
                     <Label>Observações</Label>
-                    <Input 
+                    <Input
                       value={dadosVenda.observacoes}
                       onChange={e => setDadosVenda({...dadosVenda, observacoes: e.target.value})}
                     />
                   </div>
                 </form>
+
+                {/* Seção opcional: Empréstimo na mesma transação */}
+                <div className={`rounded-lg border-2 transition-colors ${incluirEmprestimo ? 'border-indigo-300 bg-indigo-50' : 'border-dashed border-gray-200 bg-gray-50'}`}>
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 p-3 text-left"
+                    onClick={() => setIncluirEmprestimo(!incluirEmprestimo)}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${incluirEmprestimo ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400'}`}>
+                      {incluirEmprestimo && <CheckCircle className="w-3 h-3 text-white" />}
+                    </div>
+                    <HandCoins className={`w-4 h-4 shrink-0 ${incluirEmprestimo ? 'text-indigo-600' : 'text-gray-400'}`} />
+                    <span className={`text-sm font-medium ${incluirEmprestimo ? 'text-indigo-700' : 'text-gray-500'}`}>
+                      Incluir também um empréstimo em dinheiro para esta cliente
+                    </span>
+                  </button>
+
+                  {incluirEmprestimo && (
+                    <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Valor Emprestado (R$) *</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-gray-500 text-sm">R$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0,00"
+                            value={dadosEmprestimo.valorSolicitado}
+                            onChange={e => setDadosEmprestimo({ ...dadosEmprestimo, valorSolicitado: e.target.value })}
+                            className="pl-8"
+                          />
+                        </div>
+                        <p className="text-xs text-indigo-600 mt-1">+20% de juros será aplicado automaticamente</p>
+                      </div>
+                      <div>
+                        <Label>Vencimento do Empréstimo *</Label>
+                        <Input
+                          type="date"
+                          value={dadosEmprestimo.dataVencimento}
+                          onChange={e => setDadosEmprestimo({ ...dadosEmprestimo, dataVencimento: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
               <CardFooter className="bg-gray-50 border-t p-4 flex justify-end gap-3">
                  <Button variant="outline" type="button" onClick={() => {
