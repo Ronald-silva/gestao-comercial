@@ -9,7 +9,7 @@ import { formatarMoeda } from '@/lib/utils';
 import type { Produto, Venda, CreditoCliente } from '@/types';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
-  Tooltip, PieChart, Pie, Cell, BarChart, Bar,
+  Tooltip, PieChart, Pie, Cell,
 } from 'recharts';
 
 interface DashboardProps {
@@ -23,7 +23,7 @@ const GREEN = 'hsl(152, 100%, 41%)';
 const RED   = 'hsl(352, 100%, 62%)';
 const AMBER = 'hsl(38, 95%, 54%)';
 const BLUE  = 'hsl(217, 91%, 60%)';
-const COLORS_PIE = [GREEN, RED, '#3B82F6', '#8B5CF6'];
+
 
 // ── Tooltip customizado dark ──────────────────────────────
 const DarkTooltip = ({ active, payload, label }: any) => {
@@ -324,7 +324,7 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
                 </div>
                 {alerta.acao && tabDeAcao[alerta.acao] && (
                   <button
-                    onClick={() => onNavigate(tabDeAcao[alerta.acao])}
+                    onClick={() => onNavigate(tabDeAcao[alerta.acao as keyof typeof tabDeAcao])}
                     className="text-xs font-medium flex items-center gap-0.5 shrink-0 hover:opacity-80 transition-opacity"
                     style={{ color: alerta.urgencia === 'alta' ? RED : alerta.urgencia === 'media' ? AMBER : GREEN }}
                   >

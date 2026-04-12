@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocalStorage } from './useStorage';
 import type {
   Produto, Venda, Cliente, StatusPagamento,
-  CreditoCliente, Emprestimo, Pagamento,
+  CreditoCliente, Pagamento,
   MovimentacaoCaixa, TipoMovimentacaoCaixa,
   Compra, MetaReinvestimento, ScoreCliente, AlertaInteligente
 } from '@/types';
@@ -812,6 +812,8 @@ export function useDados() {
     adicionarCompra, removerCompra, getTotalInvestidoEstoque,
     // Metas
     adicionarMeta, removerMeta, getMetaAtiva, getProgressoMeta,
+    // Emprestimos Adicionais
+    quitarPrincipalEmprestimo,
     // Sistema
     limparDados,
   };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, TrendingUp, AlertCircle, CheckCircle2, Lock, Edit2, Trash2, DollarSign, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, TrendingUp, AlertCircle, CheckCircle2, Lock, Edit2, Trash2, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatarMoeda } from '@/lib/utils';
 import type { Cliente, Venda, ScoreCliente } from '@/types';
 
