@@ -2,9 +2,17 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Calendar, AlertCircle, Zap } from 'lucide-react';
 import { formatarMoeda, categorias } from '@/lib/utils';
+import { useDados } from '@/hooks/useDados';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from 'recharts';
 import type { Produto, Venda } from '@/types';
+
+const GREEN = 'hsl(152, 100%, 41%)';
+const RED   = 'hsl(352, 100%, 62%)';
+const AMBER = 'hsl(38, 95%, 54%)';
+const BLUE  = 'hsl(217, 91%, 60%)';
+const MUTED = 'hsl(215, 15%, 45%)';
 
 interface RelatoriosProps {
   produtos: Produto[];
@@ -14,6 +22,14 @@ interface RelatoriosProps {
 export function Relatorios({ produtos, vendas }: RelatoriosProps) {
   const [periodo, setPeriodo] = useState('30');
   const [abaAtiva, setAbaAtiva] = useState('geral');
+
+  const {
+    getAgingRecebiveis, getProjecaoFluxoCaixa, getInsightsProdutos,
+  } = useDados();
+
+  const aging = useMemo(() => getAgingRecebiveis(), [getAgingRecebiveis]);
+  const projecao = useMemo(() => getProjecaoFluxoCaixa(30), [getProjecaoFluxoCaixa]);
+  const { lista: insightsProdutos } = useMemo(() => getInsightsProdutos(), [getInsightsProdutos]);
 
   const dados = useMemo(() => {
     const hoje = new Date();
@@ -255,11 +271,14 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
 
       {/* Abas */}
       <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
-        <TabsList className="grid grid-cols-4 w-full bg-[#1a1b23] p-1 rounded-lg border border-[#ffffff10]">
-          <TabsTrigger value="geral" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Geral</TabsTrigger>
-          <TabsTrigger value="produtos" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Produtos</TabsTrigger>
-          <TabsTrigger value="clientes" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Clientes</TabsTrigger>
-          <TabsTrigger value="pagamentos" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Pagamentos</TabsTrigger>
+        <TabsList className="grid grid-cols-7 w-full bg-[#1a1b23] p-1 rounded-lg border border-[#ffffff10]">
+          <TabsTrigger value="geral"       className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Geral</TabsTrigger>
+          <TabsTrigger value="produtos"    className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Produtos</TabsTrigger>
+          <TabsTrigger value="clientes"    className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Clientes</TabsTrigger>
+          <TabsTrigger value="pagamentos"  className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Pagamentos</TabsTrigger>
+          <TabsTrigger value="recebiveis"  className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Recebíveis</TabsTrigger>
+          <TabsTrigger value="fluxo"       className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Fluxo 30d</TabsTrigger>
+          <TabsTrigger value="eficiencia"  className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5] text-xs">Eficiência</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-4">
@@ -414,7 +433,7 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
                           </div>
                         </div>
                         <div className="h-3 bg-[#ffffff10] rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-[#3b82f6] rounded-full transition-all"
                             style={{ width: `${percentual}%` }}
                           />
@@ -423,6 +442,146 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── ABA: RECEBÍVEIS (AGING) ─────────────────────── */}
+        <TabsContent value="recebiveis" className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Corrente (0d)', value: aging.corrente, color: GREEN },
+              { label: 'Atraso 1–30d',  value: aging.dias30,   color: AMBER },
+              { label: 'Atraso 31–60d', value: aging.dias60,   color: 'hsl(25,95%,53%)' },
+              { label: 'Atraso +60d',   value: aging.acima60,  color: RED },
+            ].map(b => (
+              <div key={b.label} className="kpi-card p-4">
+                <p className="text-xs font-medium mb-2" style={{ color: MUTED }}>{b.label}</p>
+                <p className="text-financial-md font-mono font-bold" style={{ color: b.color }}>
+                  {formatarMoeda(b.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <Card className="surface-card border-none">
+            <CardHeader>
+              <CardTitle className="text-white text-sm">Distribuição do Capital Travado por Faixa de Atraso</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(aging.corrente + aging.dias30 + aging.dias60 + aging.acima60) === 0 ? (
+                <p className="text-[#8b92a5] text-center py-8">Nenhum receb��vel pendente</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={[
+                    { faixa: 'Corrente', valor: aging.corrente,  fill: GREEN },
+                    { faixa: '1–30d',    valor: aging.dias30,    fill: AMBER },
+                    { faixa: '31–60d',   valor: aging.dias60,    fill: 'hsl(25,95%,53%)' },
+                    { faixa: '+60d',     valor: aging.acima60,   fill: RED },
+                  ]} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                    <XAxis dataKey="faixa" tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => formatarMoeda(v)} contentStyle={{ background: 'hsl(220,18%,10%)', border: '1px solid hsl(220,15%,18%)', borderRadius: 8 }} labelStyle={{ color: MUTED }} itemStyle={{ color: AMBER }} />
+                    <Bar dataKey="valor" radius={[4,4,0,0]}>
+                      {[GREEN, AMBER, 'hsl(25,95%,53%)', RED].map((c, i) => <Cell key={i} fill={c} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── ABA: FLUXO DE CAIXA 30 DIAS ─────────────────── */}
+        <TabsContent value="fluxo">
+          <Card className="surface-card border-none">
+            <CardHeader>
+              <CardTitle className="text-white text-sm">Projeção de Caixa — Próximos 30 dias</CardTitle>
+              <p className="text-xs mt-1" style={{ color: MUTED }}>
+                Considera parcelas de vendas a vencer e contas a pagar cadastradas
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={projecao.filter((_, i) => i % 2 === 0)} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradSaldo" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor={BLUE} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={BLUE} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="data" tick={{ fontSize: 9, fill: MUTED }} axisLine={false} tickLine={false}
+                    tickFormatter={d => new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} />
+                  <YAxis tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(v: number, name: string) => [formatarMoeda(v), name === 'saldoCumulativo' ? 'Saldo' : name === 'entradas' ? 'Entradas' : 'Saídas']}
+                    labelFormatter={d => new Date(d + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    contentStyle={{ background: 'hsl(220,18%,10%)', border: '1px solid hsl(220,15%,18%)', borderRadius: 8 }}
+                    labelStyle={{ color: MUTED }} itemStyle={{ color: AMBER }}
+                  />
+                  <Area type="monotone" dataKey="saldoCumulativo" stroke={BLUE} strokeWidth={2}
+                    fill="url(#gradSaldo)" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+              {projecao.some(d => d.saldoCumulativo < 0) && (
+                <div className="mt-3 flex items-center gap-2 p-3 rounded-lg" style={{ background: `${RED}15`, border: `1px solid ${RED}25` }}>
+                  <AlertCircle className="h-4 w-4 shrink-0" style={{ color: RED }} />
+                  <p className="text-xs" style={{ color: RED }}>
+                    Proje��ão indica saldo negativo em alguns dias — revise contas a pagar ou acelere cobranças
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── ABA: EFICIÊNCIA POR PRODUTO ──────────────────── */}
+        <TabsContent value="eficiencia">
+          <Card className="surface-card border-none">
+            <CardHeader>
+              <CardTitle className="text-white text-sm flex items-center gap-2">
+                <Zap className="h-4 w-4" style={{ color: AMBER }} />
+                Eficiência de Capital por Produto
+              </CardTitle>
+              <p className="text-xs mt-1" style={{ color: MUTED }}>
+                R$/dia = lucro médio por unidade ÷ dias médios para receber
+              </p>
+            </CardHeader>
+            <CardContent>
+              {insightsProdutos.length === 0 ? (
+                <p className="text-[#8b92a5] text-center py-8">Nenhuma venda registrada ainda</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-5 gap-2 pb-2 border-b text-xs font-medium uppercase tracking-widest" style={{ color: MUTED, borderColor: 'hsl(220,15%,14%)' }}>
+                    <span className="col-span-2">Produto</span>
+                    <span className="text-right">Margem</span>
+                    <span className="text-right">Retorno médio</span>
+                    <span className="text-right">R$/dia</span>
+                  </div>
+                  {[...insightsProdutos]
+                    .sort((a, b) => (b.lucroRsPerDia ?? 0) - (a.lucroRsPerDia ?? 0))
+                    .map((p, i) => {
+                      const cor = i === 0 ? GREEN : p.lucroRsPerDia && p.lucroRsPerDia > 0 ? AMBER : MUTED;
+                      return (
+                        <div key={p.produtoId} className="grid grid-cols-5 gap-2 py-2 border-b items-center" style={{ borderColor: 'hsl(220,15%,11%)' }}>
+                          <span className="col-span-2 text-sm truncate" style={{ color: 'hsl(210,20%,88%)' }}>
+                            {i === 0 && <span className="mr-1 text-[10px]" style={{ color: GREEN }}>★</span>}
+                            {p.produtoNome}
+                          </span>
+                          <span className="text-right text-sm font-mono" style={{ color: p.margemLucro < 15 ? RED : GREEN }}>
+                            {p.margemLucro.toFixed(1)}%
+                          </span>
+                          <span className="text-right text-sm font-mono" style={{ color: BLUE }}>
+                            {p.tempoMedioVenda ? `${p.tempoMedioVenda}d` : '—'}
+                          </span>
+                          <span className="text-right text-sm font-mono font-bold" style={{ color: cor }}>
+                            {p.lucroRsPerDia != null ? `R$${p.lucroRsPerDia.toFixed(2)}` : '—'}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </CardContent>

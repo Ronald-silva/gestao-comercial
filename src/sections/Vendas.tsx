@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Eye, Receipt, CheckCircle, Trash2, ShoppingCart, HandCoins } from 'lucide-react';
+import { Plus, Search, Eye, Receipt, CheckCircle, Trash2, ShoppingCart, HandCoins, AlertTriangle } from 'lucide-react';
 import { formatarMoeda, formatarData, statusPagamento } from '@/lib/utils';
+import { useDados } from '@/hooks/useDados';
 import type { Produto, Venda, Emprestimo, FormaPagamento, ItemVenda } from '@/types';
 
 interface VendasProps {
@@ -22,6 +23,7 @@ interface VendasProps {
 }
 
 export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, onRegistrarPagamento, onVerRecibo }: VendasProps) {
+  const { clientes } = useDados();
   const [abaAtiva, setAbaAtiva] = useState('nova');
   
   // Estados para Nova Venda
@@ -289,14 +291,26 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="cliente" className="text-[#d1d5db]">Nome do Cliente *</Label>
-                      <Input 
-                        id="cliente" 
+                      <Input
+                        id="cliente"
                         value={dadosVenda.clienteNome}
                         onChange={e => setDadosVenda({...dadosVenda, clienteNome: e.target.value})}
                         required
                         placeholder="Ex: João Silva"
                         className="input-dark mt-1 border-none"
                       />
+                      {(() => {
+                        const match = clientes.find(c => c.nome.toLowerCase() === dadosVenda.clienteNome.toLowerCase());
+                        if (!match || match.score !== 'lento') return null;
+                        return (
+                          <div className="mt-1.5 flex items-start gap-1.5 p-2 rounded-md" style={{ background: 'hsl(38,95%,54%,0.12)', border: '1px solid hsl(38,95%,54%,0.25)' }}>
+                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: 'hsl(38,95%,54%)' }} />
+                            <p className="text-xs" style={{ color: 'hsl(38,95%,54%)' }}>
+                              Cliente com pagamento lento — última compra levou {match.tempoMedioPagamento}d em média. Considere exigir pagamento à vista.
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div>
                       <Label htmlFor="contato" className="text-[#d1d5db]">Contato</Label>

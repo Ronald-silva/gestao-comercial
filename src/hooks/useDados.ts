@@ -4,7 +4,8 @@ import type {
   Produto, Venda, Cliente, StatusPagamento,
   CreditoCliente, Pagamento,
   MovimentacaoCaixa, TipoMovimentacaoCaixa,
-  Compra, MetaReinvestimento, ScoreCliente, AlertaInteligente
+  Compra, MetaReinvestimento, ScoreCliente, AlertaInteligente,
+  ContaPagar, StatusContaPagar, Recomendacao,
 } from '@/types';
 
 // Função para gerar ID único
@@ -92,6 +93,7 @@ export function useDados() {
   const [movimentacoesRaw, setMovimentacoes] = useLocalStorage<MovimentacaoCaixa[]>('caixa_movimentacoes', []);
   const [comprasRaw, setCompras] = useLocalStorage<Compra[]>('compras', []);
   const [metasRaw, setMetas] = useLocalStorage<MetaReinvestimento[]>('metas_reinvestimento', []);
+  const [contasPagarRaw, setContasPagar] = useLocalStorage<ContaPagar[]>('contas_pagar', []);
 
   // Validar e filtrar dados
   const produtos = useMemo(() =>
@@ -132,6 +134,15 @@ export function useDados() {
     Array.isArray(metasRaw) ? metasRaw.filter(m => m && m.id) : [],
     [metasRaw]
   );
+
+  const contasPagar = useMemo(() => {
+    const raw = Array.isArray(contasPagarRaw) ? contasPagarRaw.filter(c => c && c.id) : [];
+    const hoje = new Date().toISOString().split('T')[0];
+    return raw.map(c => ({
+      ...c,
+      status: c.status === 'pago' ? 'pago' : c.dataVencimento < hoje ? 'vencido' : 'pendente',
+    })) as ContaPagar[];
+  }, [contasPagarRaw]);
 
   // Clientes com score calculado dinamicamente
   const clientes = useMemo((): Cliente[] => {
@@ -184,49 +195,77 @@ export function useDados() {
   // ================================================================
 
   /**
-   * Capital Disponível = dinheiro já recebido - custo dos produtos vendidos
-   * É o dinheiro livre para reinvestimento
+   * Helper interno: custo total (COGS) de uma venda — produto saiu do estoque inteiro ao vender
+   */
+  const fullCOGS = (v: Venda): number =>
+    v.itens.reduce((s, item) => {
+      const prod = produtos.find(p => p.id === item.produtoId);
+      return s + (prod ? prod.precoCusto * item.quantidade : 0);
+    }, 0);
+
+  /**
+   * Capital Disponível = dinheiro já recebido - custo CHEIO dos produtos que geraram esse recebimento
+   * Correção: o estoque sai 100% ao vender — não proporcional ao pagamento recebido
    */
   const getCapitalDisponivel = () => {
     const vendasConcluidas = vendas.filter(v => v.status !== 'cancelada');
     const totalRecebido = vendasConcluidas.reduce((s, v) => s + v.pagamento.valorRecebido, 0);
-    // Custo proporcional ao recebido
-    const totalCusto = vendasConcluidas.reduce((s, v) => {
-      const custoVenda = v.itens.reduce((si, item) => {
-        const prod = produtos.find(p => p.id === item.produtoId);
-        return si + (prod ? prod.precoCusto * item.quantidade : 0);
-      }, 0);
-      // Proporcional ao recebido
-      const proporcao = v.valorTotal > 0 ? v.pagamento.valorRecebido / v.valorTotal : 0;
-      return s + custoVenda * proporcao;
-    }, 0);
+    // Deduz COGS apenas de vendas que geraram algum recebimento (estoque já saiu)
+    const totalCusto = vendasConcluidas
+      .filter(v => v.pagamento.valorRecebido > 0)
+      .reduce((s, v) => s + fullCOGS(v), 0);
     return Math.max(0, totalRecebido - totalCusto);
   };
 
   /**
-   * Capital Travado = soma de vendas não pagas (dinheiro que ainda não está em caixa)
+   * Capital Travado = vendas a receber + créditos a clientes ativos
+   * Retorna breakdown detalhado e total
    */
   const getCapitalTravado = () => {
-    return vendas
+    const vendaTravadasValor = vendas
       .filter(v => v.status !== 'cancelada' && v.pagamento.status !== 'pago')
       .reduce((s, v) => s + (v.pagamento.valorTotal - v.pagamento.valorRecebido), 0);
+
+    const creditosTravadosValor = creditos
+      .filter(c => c.status !== 'pago')
+      .reduce((s, c) => {
+        if (c.tipoModalidade === 'juros_recorrentes') return s + c.valorConcedido;
+        return s + Math.max(0, c.valorTotal - c.pagamento.valorRecebido);
+      }, 0);
+
+    return vendaTravadasValor + creditosTravadosValor;
+  };
+
+  const getCapitalTravadoDetalhado = () => {
+    const vendas_ = vendas
+      .filter(v => v.status !== 'cancelada' && v.pagamento.status !== 'pago')
+      .reduce((s, v) => s + (v.pagamento.valorTotal - v.pagamento.valorRecebido), 0);
+    const creditos_ = creditos
+      .filter(c => c.status !== 'pago')
+      .reduce((s, c) => {
+        if (c.tipoModalidade === 'juros_recorrentes') return s + c.valorConcedido;
+        return s + Math.max(0, c.valorTotal - c.pagamento.valorRecebido);
+      }, 0);
+    return { vendas: vendas_, creditos: creditos_, total: vendas_ + creditos_ };
   };
 
   /**
-   * Giro de Capital = Total vendido / Total investido em compras
-   * Indica quantas vezes o capital foi "girado"
+   * Giro de Capital anualizado = (COGS 30 dias / valor estoque atual) * 12
+   * Mede quantas vezes o estoque se converte em vendas por ano
    */
   const getGiroCapital = () => {
-    const totalVendido = vendas
-      .filter(v => v.status !== 'cancelada')
-      .reduce((s, v) => s + v.valorTotal, 0);
-    const totalInvestido = compras.reduce((s, c) => s + c.valorTotal, 0);
-    if (totalInvestido === 0) return 0;
-    return totalVendido / totalInvestido;
+    const janela30d = new Date(Date.now() - 30 * 86400000);
+    const custoVendas30d = vendas
+      .filter(v => v.status !== 'cancelada' && new Date(v.dataVenda) >= janela30d)
+      .reduce((s, v) => s + fullCOGS(v), 0);
+    const valorEstoqueAtual = produtos.reduce((s, p) => s + p.precoCusto * p.quantidade, 0);
+    if (valorEstoqueAtual === 0) return 0;
+    return parseFloat(((custoVendas30d / valorEstoqueAtual) * 12).toFixed(1));
   };
 
   /**
-   * Tempo Médio de Retorno = média de dias entre dataVenda e dataPagamento
+   * Tempo Médio de Retorno = dias médios entre venda e pagamento (somente vendas pagas)
+   * Métrica histórica de velocidade de recebimento
    */
   const getTempoMedioRetorno = () => {
     const vendasPagas = vendas.filter(
@@ -243,6 +282,136 @@ export function useDados() {
     });
 
     return Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length);
+  };
+
+  /**
+   * DSO (Days Sales Outstanding) = dias médios para receber, incluindo vendas em aberto
+   * Fórmula: (total pendente / total vendido no período) * dias
+   */
+  const getDSO = (diasPeriodo = 30): number => {
+    const janela = new Date(Date.now() - diasPeriodo * 86400000);
+    const vendasPeriodo = vendas.filter(
+      v => v.status !== 'cancelada' && new Date(v.dataVenda) >= janela
+    );
+    const totalVendasPeriodo = vendasPeriodo.reduce((s, v) => s + v.valorTotal, 0);
+    const totalPendente = vendasPeriodo.reduce(
+      (s, v) => s + Math.max(0, v.pagamento.valorTotal - v.pagamento.valorRecebido), 0
+    );
+    if (totalVendasPeriodo === 0) return 0;
+    return Math.round((totalPendente / totalVendasPeriodo) * diasPeriodo);
+  };
+
+  /**
+   * Valor do Estoque = capital imobilizado em produtos não vendidos
+   */
+  const getValorEstoque = () => {
+    const valorCusto = produtos.reduce((s, p) => s + p.precoCusto * p.quantidade, 0);
+    const valorVenda = produtos.reduce((s, p) => s + p.precoVenda * p.quantidade, 0);
+    const qtdItens = produtos.reduce((s, p) => s + p.quantidade, 0);
+    return { valorCusto, valorVenda, margemPotencial: valorVenda - valorCusto, qtdItens };
+  };
+
+  /**
+   * DIO (Days Inventory Outstanding) = dias médios que o estoque fica parado antes de vender
+   */
+  const getDIO = (diasPeriodo = 30): number => {
+    const janela = new Date(Date.now() - diasPeriodo * 86400000);
+    const custoVendas = vendas
+      .filter(v => v.status !== 'cancelada' && new Date(v.dataVenda) >= janela)
+      .reduce((s, v) => s + fullCOGS(v), 0);
+    const valorEstoque = getValorEstoque().valorCusto;
+    if (custoVendas === 0) return 0;
+    return Math.round((valorEstoque / custoVendas) * diasPeriodo);
+  };
+
+  /**
+   * DPO (Days Payable Outstanding) = dias médios para pagar fornecedores
+   */
+  const getDPO = (): number => {
+    const pagas = contasPagar.filter(c => c.status === 'pago' && c.dataPagamento);
+    if (pagas.length === 0) return 0;
+    const totalDias = pagas.reduce((s, c) => {
+      const dias = Math.max(0,
+        (new Date(c.dataPagamento!).getTime() - new Date(c.criadoEm).getTime()) / 86400000
+      );
+      return s + dias;
+    }, 0);
+    return Math.round(totalDias / pagas.length);
+  };
+
+  /**
+   * CCC (Cash Conversion Cycle) = DSO + DIO - DPO
+   * Quantos dias o dinheiro fica fora do caixa durante o ciclo operacional
+   */
+  const getCCC = (diasPeriodo = 30): number => {
+    return Math.max(0, getDSO(diasPeriodo) + getDIO(diasPeriodo) - getDPO());
+  };
+
+  /**
+   * Aging de Recebíveis — distribui o capital travado em faixas de atraso
+   */
+  const getAgingRecebiveis = () => {
+    const hoje = new Date();
+    const buckets = { corrente: 0, dias30: 0, dias60: 0, acima60: 0 };
+    vendas
+      .filter(v => v.status !== 'cancelada' && v.pagamento.status !== 'pago')
+      .forEach(v => {
+        const diasAtraso = Math.floor(
+          (hoje.getTime() - new Date(v.dataVenda).getTime()) / 86400000
+        );
+        const pendente = v.pagamento.valorTotal - v.pagamento.valorRecebido;
+        if (diasAtraso <= 0) buckets.corrente += pendente;
+        else if (diasAtraso <= 30) buckets.dias30 += pendente;
+        else if (diasAtraso <= 60) buckets.dias60 += pendente;
+        else buckets.acima60 += pendente;
+      });
+    return buckets;
+  };
+
+  /**
+   * Projeção de fluxo de caixa para os próximos N dias
+   * Entradas: parcelas de vendas com vencimento. Saídas: contas a pagar.
+   */
+  const getProjecaoFluxoCaixa = (diasHorizonte = 30) => {
+    const saldoInicial = getSaldoCaixa().saldoTotal;
+    let saldoCumulativo = saldoInicial;
+    const dias: { data: string; entradas: number; saidas: number; saldoCumulativo: number }[] = [];
+
+    for (let i = 0; i <= diasHorizonte; i++) {
+      const dia = new Date(Date.now() + i * 86400000);
+      const diaStr = dia.toISOString().split('T')[0];
+
+      const entradas = vendas
+        .filter(v => v.status !== 'cancelada' && v.pagamento.status !== 'pago')
+        .flatMap(v => v.pagamento.parcelas || [])
+        .filter(p => !p.pago && p.dataVencimento === diaStr)
+        .reduce((s, p) => s + p.valor, 0);
+
+      const saidas = contasPagar
+        .filter(c => c.status === 'pendente' && c.dataVencimento === diaStr)
+        .reduce((s, c) => s + c.valor, 0);
+
+      saldoCumulativo += entradas - saidas;
+      dias.push({ data: diaStr, entradas, saidas, saldoCumulativo });
+    }
+    return dias;
+  };
+
+  /**
+   * Caixa Real Disponível = saldo total - compromissos vencendo em 7 dias
+   */
+  const getCaixaRealDisponivel = (): number => {
+    const { saldoTotal } = getSaldoCaixa();
+    const obrigacoesProximas = contasPagar
+      .filter(c => {
+        if (c.status !== 'pendente') return false;
+        const dias = Math.floor(
+          (new Date(c.dataVencimento).getTime() - Date.now()) / 86400000
+        );
+        return dias <= 7;
+      })
+      .reduce((s, c) => s + c.valor, 0);
+    return Math.max(0, saldoTotal - obrigacoesProximas);
   };
 
   /**
@@ -328,7 +497,109 @@ export function useDados() {
       });
     }
 
-    // 4. Oportunidade de reinvestimento (capital disponível alto)
+    // 4. Créditos juros_recorrentes com vencimento passado (cobrança de juros pendente)
+    const creditosJurosVencidos = creditos.filter(c =>
+      c.tipoModalidade === 'juros_recorrentes' &&
+      c.status === 'ativo' &&
+      c.dataVencimento < hojeStr
+    );
+    if (creditosJurosVencidos.length > 0) {
+      const totalJuros = creditosJurosVencidos.reduce(
+        (s, c) => s + (c.valorJurosPeriodico || 0), 0
+      );
+      alertas.push({
+        id: 'credito_juros_vencido',
+        tipo: 'credito_juros_vencido',
+        urgencia: 'media',
+        titulo: `${creditosJurosVencidos.length} cobrança${creditosJurosVencidos.length > 1 ? 's' : ''} de juros vencida${creditosJurosVencidos.length > 1 ? 's' : ''}`,
+        descricao: `R$ ${totalJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em juros a receber — renove os vencimentos`,
+        valor: totalJuros,
+        acao: 'Ver Créditos'
+      });
+    }
+
+    // 5. Contas a pagar urgentes (vencendo em até 3 dias)
+    const contasUrgentes = contasPagar.filter(c => {
+      if (c.status !== 'pendente') return false;
+      const dias = Math.floor((new Date(c.dataVencimento).getTime() - hoje.getTime()) / 86400000);
+      return dias <= 3;
+    });
+    if (contasUrgentes.length > 0) {
+      const totalUrgente = contasUrgentes.reduce((s, c) => s + c.valor, 0);
+      alertas.push({
+        id: 'conta_pagar_urgente',
+        tipo: 'conta_pagar_urgente',
+        urgencia: 'alta',
+        titulo: `${contasUrgentes.length} conta${contasUrgentes.length > 1 ? 's' : ''} a pagar vencendo em 3 dias`,
+        descricao: `R$ ${totalUrgente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a pagar — verifique o caixa`,
+        valor: totalUrgente,
+        acao: 'Ver Contas a Pagar'
+      });
+    }
+
+    // 6. CCC alto (ciclo financeiro longo)
+    const ccc = getCCC();
+    if (ccc > 30) {
+      alertas.push({
+        id: 'ccc_alto',
+        tipo: 'ccc_alto',
+        urgencia: ccc > 60 ? 'alta' : 'media',
+        titulo: `Ciclo financeiro longo: ${ccc} dias`,
+        descricao: `Seu dinheiro fica ${ccc} dias fora do caixa. Acelere cobranças e gire o estoque mais rápido`,
+        acao: 'Ver Relatórios'
+      });
+    }
+
+    // 7. Estoque parado (DIO alto)
+    const dio = getDIO();
+    if (dio > 45) {
+      alertas.push({
+        id: 'estoque_parado',
+        tipo: 'estoque_parado',
+        urgencia: 'media',
+        titulo: `Estoque parado há ~${dio} dias em média`,
+        descricao: `Capital imobilizado em produtos sem giro. Avalie promoções ou reposicionamento de preço`,
+        valor: getValorEstoque().valorCusto,
+        acao: 'Ver Produtos'
+      });
+    }
+
+    // 8. Concentração de risco em um cliente
+    const travadoTotal = getCapitalTravado();
+    if (travadoTotal > 0) {
+      const devedoresMapa: Record<string, number> = {};
+      vendas.filter(v => v.status !== 'cancelada' && v.pagamento.status !== 'pago').forEach(v => {
+        const p = v.pagamento.valorTotal - v.pagamento.valorRecebido;
+        devedoresMapa[v.clienteNome] = (devedoresMapa[v.clienteNome] || 0) + p;
+      });
+      const maiorDevedor = Object.entries(devedoresMapa).sort(([, a], [, b]) => b - a)[0];
+      if (maiorDevedor && (maiorDevedor[1] / travadoTotal) > 0.40) {
+        alertas.push({
+          id: 'concentracao_cliente',
+          tipo: 'concentracao_cliente',
+          urgencia: 'media',
+          titulo: `${((maiorDevedor[1] / travadoTotal) * 100).toFixed(0)}% do capital travado em 1 cliente`,
+          descricao: `${maiorDevedor[0]} concentra R$ ${maiorDevedor[1].toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — risco alto de inadimplência`,
+          valor: maiorDevedor[1],
+          acao: 'Ver Clientes'
+        });
+      }
+    }
+
+    // 9. Margem baixa
+    const { margem } = getLucroTotal();
+    if (margem > 0 && margem < 15) {
+      alertas.push({
+        id: 'margem_baixa',
+        tipo: 'margem_baixa',
+        urgencia: 'alta',
+        titulo: `Margem crítica: ${margem.toFixed(1)}%`,
+        descricao: `Margem abaixo de 15% — revise preços de venda ou negocie melhor com fornecedores`,
+        acao: 'Ver Relatórios'
+      });
+    }
+
+    // 10. Oportunidade de reinvestimento (capital disponível alto)
     const capitalDisponivel = getCapitalDisponivel();
     if (capitalDisponivel > 500) {
       alertas.push({
@@ -406,14 +677,20 @@ export function useDados() {
       });
     });
 
-    const lista = Object.entries(mapa).map(([id, d]) => ({
-      produtoId: id,
-      produtoNome: d.nome,
-      lucroTotal: d.lucroTotal,
-      quantidadeVendida: d.qtdVendida,
-      margemLucro: d.totalVendas > 0 ? (d.lucroTotal / d.totalVendas) * 100 : 0,
-      tempoMedioVenda: d.qtdPagas > 0 ? Math.round(d.diasTotal / d.qtdPagas) : 0,
-    }));
+    const lista = Object.entries(mapa).map(([id, d]) => {
+      const tempoMedioVenda = d.qtdPagas > 0 ? Math.round(d.diasTotal / d.qtdPagas) : 0;
+      const lucroPorUnidade = d.qtdVendida > 0 ? d.lucroTotal / d.qtdVendida : 0;
+      const lucroRsPerDia = tempoMedioVenda > 0 ? lucroPorUnidade / tempoMedioVenda : undefined;
+      return {
+        produtoId: id,
+        produtoNome: d.nome,
+        lucroTotal: d.lucroTotal,
+        quantidadeVendida: d.qtdVendida,
+        margemLucro: d.totalVendas > 0 ? (d.lucroTotal / d.totalVendas) * 100 : 0,
+        tempoMedioVenda,
+        lucroRsPerDia,
+      };
+    });
 
     const maisLucrativo = [...lista].sort((a, b) => b.lucroTotal - a.lucroTotal)[0];
     const maisRapido = [...lista].filter(p => p.tempoMedioVenda > 0).sort((a, b) => a.tempoMedioVenda - b.tempoMedioVenda)[0];
@@ -600,11 +877,16 @@ export function useDados() {
     let valorTotal = dados.valorConcedido;
     let valorJurosPeriodico: number | undefined = undefined;
 
+    // Calcula prazo em meses entre concessão e vencimento
+    const prazoMeses = Math.max(1, Math.round(
+      (new Date(dados.dataVencimento).getTime() - new Date(dados.dataConcessao).getTime()) / (1000 * 60 * 60 * 24 * 30)
+    ));
+
     if (dados.tipoModalidade === 'amortizado') {
-      valorTotal = dados.valorConcedido * (1 + dados.taxaJuros);
+      // Juros simples pelo período correto (taxa * meses)
+      valorTotal = dados.valorConcedido * (1 + dados.taxaJuros * prazoMeses);
     } else {
-      // juros_recorrentes - valorTotal keeps pointing just to principal as a reference,
-      // but they don't amortize it directly through interest payments.
+      // juros_recorrentes: principal permanece, juros periódico por ciclo
       valorJurosPeriodico = dados.valorConcedido * dados.taxaJuros;
     }
 
@@ -623,6 +905,7 @@ export function useDados() {
       id,
       valorTotal,
       valorJurosPeriodico,
+      prazoMeses,
       pagamento,
       criadoEm: new Date().toISOString(),
       status: dados.tipoModalidade === 'juros_recorrentes' ? 'ativo' : 'pendente'
@@ -764,11 +1047,152 @@ export function useDados() {
 
     const percentualRealizado = valorMeta > 0 ? Math.min(100, (reinvestidoPeriodo / valorMeta) * 100) : 0;
 
+    const faltando = Math.max(0, valorMeta - reinvestidoPeriodo);
+    const capitalAtual = getCapitalDisponivel();
     return {
       receitaPeriodo, valorMeta, reinvestidoPeriodo, percentualRealizado,
       atingida: reinvestidoPeriodo >= valorMeta,
-      faltando: Math.max(0, valorMeta - reinvestidoPeriodo),
+      faltando,
+      capitalDisponivelParaMeta: capitalAtual,
+      podeReinvestir: capitalAtual >= faltando && faltando > 0,
     };
+  };
+
+  // ================================================================
+  // RECOMENDAÇÕES TÁTICAS
+  // ================================================================
+
+  const getRecomendacoes = (): Recomendacao[] => {
+    const recs: Recomendacao[] = [];
+    const { lista: produtosList } = getInsightsProdutos();
+    const capitalAtual = getCapitalDisponivel();
+
+    // Janela de 30 dias para métricas
+    const janela30d = new Date(Date.now() - 30 * 86400000);
+    const vendasMes = vendas.filter(v => v.status !== 'cancelada' && new Date(v.dataVenda) >= janela30d);
+    const totalVendasMes = vendasMes.reduce((s, v) => s + v.valorTotal, 0);
+
+    // 1. Cobrar clientes lentos com dívida alta
+    const clientesParaCobrar = clientes
+      .filter(c => c.score === 'lento' && c.valorTotalPendente > 0)
+      .sort((a, b) => b.valorTotalPendente - a.valorTotalPendente);
+    if (clientesParaCobrar.length > 0) {
+      const top = clientesParaCobrar[0];
+      recs.push({
+        id: 'cobrar_cliente_lento',
+        tipo: 'cobrar_cliente',
+        prioridade: 1,
+        titulo: `Cobrar ${top.nome}`,
+        descricao: `Pagador lento com R$ ${top.valorTotalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em aberto. Priorize esse recebimento.`,
+        impactoEstimado: top.valorTotalPendente,
+        entidadeId: top.id,
+        acao: 'clientes',
+      });
+    }
+
+    // 2. Estoque baixo com capital disponível para repor
+    const valorEstoqueAtual = getValorEstoque().valorCusto;
+    if (capitalAtual > 0 && totalVendasMes > 0 && valorEstoqueAtual < totalVendasMes * 0.25) {
+      const sugerido = totalVendasMes * 0.3 - valorEstoqueAtual;
+      recs.push({
+        id: 'repor_estoque',
+        tipo: 'comprar_estoque',
+        prioridade: capitalAtual >= sugerido ? 1 : 2,
+        titulo: 'Reabastecer estoque',
+        descricao: `Estoque atual (R$ ${valorEstoqueAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) está baixo em relação ao volume de vendas. Considere repor ~R$ ${Math.round(sugerido).toLocaleString('pt-BR')}.`,
+        impactoEstimado: sugerido,
+        acao: 'compras',
+      });
+    }
+
+    // 3. Produto com margem crítica
+    const produtosMargemBaixa = produtosList.filter(p => p.margemLucro > 0 && p.margemLucro < 12);
+    if (produtosMargemBaixa.length > 0) {
+      const pior = produtosMargemBaixa.sort((a, b) => a.margemLucro - b.margemLucro)[0];
+      recs.push({
+        id: 'revisar_preco_produto',
+        tipo: 'revisar_preco',
+        prioridade: 2,
+        titulo: `Revisar preço: ${pior.produtoNome}`,
+        descricao: `Margem de ${pior.margemLucro.toFixed(1)}% está abaixo do mínimo saudável. Aumente o preço de venda ou negocie custo com fornecedor.`,
+        entidadeId: pior.produtoId,
+        acao: 'produtos',
+      });
+    }
+
+    // 4. Capital parado — hora de reinvestir
+    if (capitalAtual > 500 && getDIO() < 30 && totalVendasMes > 0) {
+      recs.push({
+        id: 'reinvestir_capital',
+        tipo: 'comprar_estoque',
+        prioridade: 2,
+        titulo: 'Capital disponível para reinvestir',
+        descricao: `R$ ${capitalAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} livres com estoque girando bem. Reinvista para acelerar o ciclo.`,
+        impactoEstimado: capitalAtual,
+        acao: 'compras',
+      });
+    }
+
+    // 5. Concentrar em produto mais rentável por dia
+    const produtosComDia = produtosList.filter(p => p.lucroRsPerDia !== undefined && p.lucroRsPerDia > 0);
+    if (produtosComDia.length >= 2) {
+      const mediaPerDia = produtosComDia.reduce((s, p) => s + (p.lucroRsPerDia || 0), 0) / produtosComDia.length;
+      const melhor = produtosComDia.sort((a, b) => (b.lucroRsPerDia || 0) - (a.lucroRsPerDia || 0))[0];
+      if ((melhor.lucroRsPerDia || 0) > mediaPerDia * 2.5) {
+        recs.push({
+          id: 'concentrar_produto_top',
+          tipo: 'concentrar_produto',
+          prioridade: 3,
+          titulo: `Priorizar ${melhor.produtoNome}`,
+          descricao: `Gera R$ ${(melhor.lucroRsPerDia || 0).toFixed(2)}/dia de capital — ${((melhor.lucroRsPerDia || 0) / mediaPerDia).toFixed(1)}x acima da média. Aumente o estoque desse produto.`,
+          entidadeId: melhor.produtoId,
+          acao: 'produtos',
+        });
+      }
+    }
+
+    // 6. Limitar crédito a cliente lento sem limite definido
+    const clientesSemLimite = clientes.filter(c => c.score === 'lento' && !c.limiteCredito && c.valorTotalPendente > 0);
+    if (clientesSemLimite.length > 0) {
+      recs.push({
+        id: 'limitar_credito_lento',
+        tipo: 'limitar_credito',
+        prioridade: 2,
+        titulo: `Limitar crédito para ${clientesSemLimite.length} cliente${clientesSemLimite.length > 1 ? 's' : ''} lento${clientesSemLimite.length > 1 ? 's' : ''}`,
+        descricao: `Clientes com histórico de atraso sem limite de crédito definido. Defina um teto para reduzir exposição.`,
+        impactoEstimado: clientesSemLimite.reduce((s, c) => s + c.valorTotalPendente, 0),
+        acao: 'clientes',
+      });
+    }
+
+    // Ordena por prioridade
+    return recs.sort((a, b) => a.prioridade - b.prioridade);
+  };
+
+  // ================================================================
+  // CONTAS A PAGAR
+  // ================================================================
+
+  const adicionarContaPagar = (dados: Omit<ContaPagar, 'id' | 'criadoEm' | 'status'>) => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const nova: ContaPagar = {
+      ...dados,
+      id: gerarId(),
+      status: dados.dataVencimento < hoje ? 'vencido' : 'pendente',
+      criadoEm: new Date().toISOString(),
+    };
+    setContasPagar(prev => [nova, ...prev]);
+    return nova;
+  };
+
+  const pagarConta = (id: string, dataPagamento: string) => {
+    setContasPagar(prev => prev.map(c =>
+      c.id === id ? { ...c, status: 'pago' as StatusContaPagar, dataPagamento } : c
+    ));
+  };
+
+  const removerContaPagar = (id: string) => {
+    setContasPagar(prev => prev.filter(c => c.id !== id));
   };
 
   // ================================================================
@@ -778,24 +1202,37 @@ export function useDados() {
   const limparDados = () => {
     ['sge_produtos', 'sge_vendas', 'sge_clientes', 'sge_emprestimos',
      'produtos', 'vendas', 'clientes', 'emprestimos', 'caixa_movimentacoes',
-     'compras', 'metas_reinvestimento'].forEach(k => localStorage.removeItem(k));
+     'compras', 'metas_reinvestimento', 'contas_pagar'].forEach(k => localStorage.removeItem(k));
     setProdutos([]); setVendas([]); setClientes([]); setCreditos([]);
-    setMovimentacoes([]); setCompras([]); setMetas([]);
+    setMovimentacoes([]); setCompras([]); setMetas([]); setContasPagar([]);
     window.location.reload();
   };
 
   return {
     // Dados
     produtos, vendas, clientes, emprestimos, creditos,
-    movimentacoes, compras, metas,
+    movimentacoes, compras, metas, contasPagar,
     // Analytics de Capital
     getCapitalDisponivel,
     getCapitalTravado,
+    getCapitalTravadoDetalhado,
     getGiroCapital,
     getTempoMedioRetorno,
+    getDSO,
     getLucroTotal,
     getAlertas,
     getInsightsProdutos,
+    // Estoque e CCC
+    getValorEstoque,
+    getDIO,
+    getDPO,
+    getCCC,
+    // Recebíveis
+    getAgingRecebiveis,
+    getProjecaoFluxoCaixa,
+    getCaixaRealDisponivel,
+    // Recomendações
+    getRecomendacoes,
     // Produtos
     adicionarProduto, atualizarProduto, removerProduto,
     getProdutoById, getProdutosEstoqueBaixo,
@@ -810,6 +1247,8 @@ export function useDados() {
     adicionarMovimentacao, removerMovimentacao, getSaldoCaixa,
     // Compras
     adicionarCompra, removerCompra, getTotalInvestidoEstoque,
+    // Contas a Pagar
+    adicionarContaPagar, pagarConta, removerContaPagar,
     // Metas
     adicionarMeta, removerMeta, getMetaAtiva, getProgressoMeta,
     // Emprestimos Adicionais

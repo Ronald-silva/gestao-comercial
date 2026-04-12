@@ -11,6 +11,7 @@ import { Emprestimos } from '@/sections/Emprestimos';
 import { Caixa } from '@/sections/Caixa';
 import { Compras } from '@/sections/Compras';
 import { MetaReinvestimento } from '@/sections/MetaReinvestimento';
+import { ContasPagar } from '@/sections/ContasPagar';
 import { ExportarDados } from '@/components/ExportarDados';
 import { AlertaEstoque } from '@/components/AlertaEstoque';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,20 +19,21 @@ import { Login } from '@/sections/Login';
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart3,
   Users, HandCoins, Wallet, ShoppingBag, Target,
-  TrendingUp,
+  TrendingUp, FileText,
 } from 'lucide-react';
 import type { Venda } from '@/types';
 
 const tabs = [
-  { id: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard, cor: 'amber' },
-  { id: 'vendas',      label: 'Vendas',      icon: ShoppingCart,    cor: 'green' },
-  { id: 'clientes',    label: 'Clientes',    icon: Users,           cor: 'blue' },
-  { id: 'produtos',    label: 'Produtos',    icon: Package,         cor: 'purple' },
-  { id: 'compras',     label: 'Compras',     icon: ShoppingBag,     cor: 'cyan' },
-  { id: 'credito',     label: 'Crédito',     icon: HandCoins,       cor: 'rose' },
-  { id: 'caixa',       label: 'Caixa',       icon: Wallet,          cor: 'teal' },
-  { id: 'metas',       label: 'Metas',       icon: Target,          cor: 'violet' },
-  { id: 'relatorios',  label: 'Relatórios',  icon: BarChart3,       cor: 'orange' },
+  { id: 'dashboard',    label: 'Dashboard',  icon: LayoutDashboard, cor: 'amber' },
+  { id: 'vendas',       label: 'Vendas',      icon: ShoppingCart,    cor: 'green' },
+  { id: 'clientes',     label: 'Clientes',    icon: Users,           cor: 'blue' },
+  { id: 'produtos',     label: 'Produtos',    icon: Package,         cor: 'purple' },
+  { id: 'compras',      label: 'Compras',     icon: ShoppingBag,     cor: 'cyan' },
+  { id: 'credito',      label: 'Crédito',     icon: HandCoins,       cor: 'rose' },
+  { id: 'caixa',        label: 'Caixa',       icon: Wallet,          cor: 'teal' },
+  { id: 'contaspagar',  label: 'A Pagar',     icon: FileText,        cor: 'slate' },
+  { id: 'metas',        label: 'Metas',       icon: Target,          cor: 'violet' },
+  { id: 'relatorios',   label: 'Relatórios',  icon: BarChart3,       cor: 'orange' },
 ];
 
 function App() {
@@ -46,7 +48,8 @@ function App() {
     movimentacoes, adicionarMovimentacao, removerMovimentacao, getSaldoCaixa,
     compras, adicionarCompra, removerCompra, getTotalInvestidoEstoque,
     metas, adicionarMeta, removerMeta, getMetaAtiva, getProgressoMeta,
-    getCapitalDisponivel, getCapitalTravado,
+    getCapitalDisponivel, getCapitalTravado, getCCC,
+    contasPagar, adicionarContaPagar, pagarConta, removerContaPagar,
     atualizarCliente, removerCliente,
     limparDados,
   } = useDados();
@@ -105,10 +108,21 @@ function App() {
     toast.success('Meta definida!');
   };
 
+  const handleAdicionarContaPagar = (dados: Parameters<typeof adicionarContaPagar>[0]) => {
+    adicionarContaPagar(dados);
+    toast.success('Conta registrada!', { description: `${dados.fornecedor} — vence em ${new Date(dados.dataVencimento + 'T12:00:00').toLocaleDateString('pt-BR')}` });
+  };
+
+  const handlePagarConta = (id: string, dataPagamento: string) => {
+    pagarConta(id, dataPagamento);
+    toast.success('Pagamento confirmado!');
+  };
+
   // ── Derived ────────────────────────────────────────────
   const produtosEstoqueBaixo = getProdutosEstoqueBaixo();
   const capitalDisponivel = getCapitalDisponivel();
   const capitalTravado = getCapitalTravado();
+  const cicloFinanceiro = getCCC();
 
   const formatarMoeda = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v);
@@ -178,6 +192,13 @@ function App() {
               <div className="text-right">
                 <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 45%)' }}>Travado</p>
                 <p className="text-financial-md font-mono glow-red">{formatarMoeda(capitalTravado)}</p>
+              </div>
+              <div className="w-px h-8" style={{ background: 'hsl(220, 15%, 14%)' }} />
+              <div className="text-right">
+                <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 45%)' }}>Ciclo</p>
+                <p className="text-financial-md font-mono" style={{
+                  color: cicloFinanceiro === 0 ? 'hsl(215,15%,55%)' : cicloFinanceiro <= 15 ? 'hsl(152,100%,41%)' : cicloFinanceiro <= 30 ? 'hsl(38,95%,54%)' : 'hsl(352,100%,62%)'
+                }}>{cicloFinanceiro > 0 ? `${cicloFinanceiro}d` : '—'}</p>
               </div>
               <div className="w-px h-8" style={{ background: 'hsl(220, 15%, 14%)' }} />
               <ExportarDados produtos={produtos} vendas={vendas} />
@@ -280,6 +301,14 @@ function App() {
               onAdicionar={handleAdicionarMovimentacao}
               onRemover={removerMovimentacao}
               getSaldoCaixa={getSaldoCaixa}
+            />
+          )}
+          {abaAtiva === 'contaspagar' && (
+            <ContasPagar
+              contasPagar={contasPagar}
+              onAdicionar={handleAdicionarContaPagar}
+              onPagar={handlePagarConta}
+              onRemover={removerContaPagar}
             />
           )}
           {abaAtiva === 'metas' && (

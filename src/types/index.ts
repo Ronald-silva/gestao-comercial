@@ -110,6 +110,7 @@ export interface ProdutoVendido {
   lucroTotal: number;
   margemLucro: number;
   tempoMedioVenda?: number;
+  lucroRsPerDia?: number;
 }
 
 export interface RelatorioMensal {
@@ -138,6 +139,7 @@ export interface CreditoCliente {
   valorTotal: number;           // total a pagar (apenas para amortizado)
   dataConcessao: string;        // quando foi dado o crédito
   dataVencimento: string;       // quando deve ser pago ou vencimento do juros
+  prazoMeses?: number;          // prazo em meses (calculado na criação)
   status: 'pendente' | 'pago' | 'ativo'; // ativo = recorrente rendendo
   pagamento: Pagamento;
   finalidade?: string;          // ex: "para reinvestir em produto X"
@@ -215,7 +217,17 @@ export interface MetaReinvestimento {
 // ALERTAS INTELIGENTES
 // ============================================================
 
-export type TipoAlerta = 'capital_travado' | 'cliente_risco' | 'reinvestimento' | 'prazo_vencido';
+export type TipoAlerta =
+  | 'capital_travado'
+  | 'cliente_risco'
+  | 'reinvestimento'
+  | 'prazo_vencido'
+  | 'credito_juros_vencido'
+  | 'ccc_alto'
+  | 'estoque_parado'
+  | 'concentracao_cliente'
+  | 'margem_baixa'
+  | 'conta_pagar_urgente';
 
 export interface AlertaInteligente {
   id: string;
@@ -225,4 +237,46 @@ export interface AlertaInteligente {
   descricao: string;
   valor?: number;
   acao?: string;
+}
+
+// ============================================================
+// CONTAS A PAGAR (Fornecedores)
+// ============================================================
+
+export type StatusContaPagar = 'pendente' | 'pago' | 'vencido';
+
+export interface ContaPagar {
+  id: string;
+  fornecedor: string;
+  descricao: string;
+  valor: number;
+  dataVencimento: string;
+  dataPagamento?: string;
+  status: StatusContaPagar;
+  compraId?: string;
+  observacoes?: string;
+  criadoEm: string;
+}
+
+// ============================================================
+// RECOMENDAÇÕES TÁTICAS
+// ============================================================
+
+export type TipoRecomendacao =
+  | 'cobrar_cliente'
+  | 'comprar_estoque'
+  | 'revisar_preco'
+  | 'limitar_credito'
+  | 'renegociar_prazo'
+  | 'concentrar_produto';
+
+export interface Recomendacao {
+  id: string;
+  tipo: TipoRecomendacao;
+  prioridade: 1 | 2 | 3;
+  titulo: string;
+  descricao: string;
+  impactoEstimado?: number;
+  entidadeId?: string;
+  acao: string;
 }

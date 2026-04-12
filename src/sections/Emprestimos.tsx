@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
   HandCoins, Plus, X, CheckCircle2, Clock, AlertCircle,
-  ChevronDown, ChevronUp, DollarSign, TrendingUp, Lock
+  ChevronDown, ChevronUp, DollarSign, TrendingUp, Lock, AlertTriangle,
 } from 'lucide-react';
 import { formatarMoeda } from '@/lib/utils';
+import { useDados } from '@/hooks/useDados';
 import type { CreditoCliente, TipoCredito } from '@/types';
 
 interface EmprestimosProps {
@@ -17,6 +18,7 @@ const RED   = 'hsl(352, 100%, 62%)';
 const AMBER = 'hsl(38, 95%, 54%)';
 
 export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: EmprestimosProps) {
+  const { clientes } = useDados();
   const [expandido, setExpandido] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [mostrarPagForm, setMostrarPagForm] = useState<string | null>(null);
@@ -201,6 +203,18 @@ export function Emprestimos({ emprestimos, onAdicionar, onRegistrarPagamento }: 
                   required
                   className="input-dark w-full px-3 py-2 text-sm"
                 />
+                {(() => {
+                  const match = clientes.find(c => c.nome.toLowerCase() === form.clienteNome.toLowerCase());
+                  if (!match || match.score !== 'lento') return null;
+                  return (
+                    <div className="mt-1.5 flex items-start gap-1.5 p-2 rounded-md" style={{ background: 'hsl(38,95%,54%,0.12)', border: '1px solid hsl(38,95%,54%,0.25)' }}>
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: 'hsl(38,95%,54%)' }} />
+                      <p className="text-xs" style={{ color: 'hsl(38,95%,54%)' }}>
+                        Pagador lento ({match.tempoMedioPagamento}d em média). Avalie antes de conceder crédito.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <label className="text-xs font-medium block mb-1.5" style={{ color: 'hsl(215, 15%, 55%)' }}>

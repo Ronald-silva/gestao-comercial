@@ -3,7 +3,8 @@ import { useDados } from '@/hooks/useDados';
 import {
   TrendingUp, Lock, DollarSign, Zap, Clock,
   AlertTriangle, AlertCircle, CheckCircle2, ArrowRight,
-  Package, Users, BarChart2,
+  Package, Users, BarChart2, RefreshCw, Archive, Wallet,
+  ChevronRight,
 } from 'lucide-react';
 import { formatarMoeda } from '@/lib/utils';
 import type { Produto, Venda, CreditoCliente } from '@/types';
@@ -49,6 +50,8 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
   const {
     getCapitalDisponivel, getCapitalTravado, getGiroCapital,
     getTempoMedioRetorno, getLucroTotal, getAlertas,
+    getCCC, getDSO, getDIO, getValorEstoque, getCaixaRealDisponivel,
+    getRecomendacoes,
   } = useDados();
 
   const dados = useMemo(() => {
@@ -126,6 +129,13 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
       .sort(([, a], [, b]) => b - a)
       .slice(0, 4);
 
+    const ccc = getCCC();
+    const dso = getDSO();
+    const dio = getDIO();
+    const estoque = getValorEstoque();
+    const caixaReal = getCaixaRealDisponivel();
+    const recomendacoes = getRecomendacoes();
+
     return {
       capitalDisponivel, capitalTravado, giroCapital, tempoRetorno,
       lucro, margem, alertas, evolucao, distribuicaoCapital,
@@ -134,8 +144,9 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
       qtdVendasMes: vendasMes.length,
       totalVendas, totalRecebido,
       pctRecebido: totalVendas > 0 ? (totalRecebido / totalVendas) * 100 : 0,
+      ccc, dso, dio, estoque, caixaReal, recomendacoes,
     };
-  }, [produtos, vendas, emprestimos, getCapitalDisponivel, getCapitalTravado, getGiroCapital, getTempoMedioRetorno, getLucroTotal, getAlertas]);
+  }, [produtos, vendas, emprestimos, getCapitalDisponivel, getCapitalTravado, getGiroCapital, getTempoMedioRetorno, getLucroTotal, getAlertas, getCCC, getDSO, getDIO, getValorEstoque, getCaixaRealDisponivel, getRecomendacoes]);
 
   const alertaIcon = (urgencia: string) => {
     if (urgencia === 'alta') return <AlertCircle className="h-4 w-4 shrink-0" style={{ color: RED }} />;
@@ -289,6 +300,122 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
           </div>
         </div>
       </div>
+
+      {/* ══ KPIs OPERACIONAIS ═════════════════════════════════ */}
+      <div className="grid grid-cols-3 gap-3">
+
+        {/* CCC */}
+        <div className="kpi-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <RefreshCw className="h-4 w-4" style={{ color: AMBER }} />
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 50%)' }}>
+              Ciclo (CCC)
+            </p>
+          </div>
+          <p className="text-financial-xl" style={{
+            color: dados.ccc === 0 ? 'hsl(215,15%,55%)' : dados.ccc <= 15 ? GREEN : dados.ccc <= 30 ? AMBER : RED,
+            textShadow: dados.ccc > 30 ? `0 0 20px ${RED}40` : dados.ccc > 0 ? `0 0 20px ${AMBER}40` : 'none',
+          }}>
+            {dados.ccc > 0 ? `${dados.ccc}d` : '—'}
+          </p>
+          <p className="text-[10px] mt-1 font-mono" style={{ color: 'hsl(215, 15%, 45%)' }}>
+            DSO {dados.dso}d · DIO {dados.dio}d
+          </p>
+          <div className="mt-2 p-2 rounded-md" style={{ background: 'hsl(220, 15%, 9%)' }}>
+            <p className="text-[10px]" style={{ color: 'hsl(215, 15%, 45%)' }}>
+              {dados.ccc === 0 ? '— Registre vendas e compras' :
+               dados.ccc <= 15 ? '🟢 Ciclo excelente' :
+               dados.ccc <= 30 ? '🟡 Ciclo normal' :
+               '🔴 Ciclo longo — acelere cobranças'}
+            </p>
+          </div>
+        </div>
+
+        {/* Estoque */}
+        <div className="kpi-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Archive className="h-4 w-4" style={{ color: BLUE }} />
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 50%)' }}>
+              Capital Estoque
+            </p>
+          </div>
+          <p className="text-financial-xl" style={{ color: BLUE, textShadow: `0 0 20px ${BLUE}40` }}>
+            {dados.estoque.valorCusto > 0 ? formatarMoeda(dados.estoque.valorCusto) : '—'}
+          </p>
+          <p className="text-[10px] mt-1 font-mono" style={{ color: 'hsl(215, 15%, 45%)' }}>
+            {dados.estoque.qtdItens} itens · margem potencial {formatarMoeda(dados.estoque.margemPotencial)}
+          </p>
+        </div>
+
+        {/* Caixa Real */}
+        <div className="kpi-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="h-4 w-4" style={{ color: GREEN }} />
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 50%)' }}>
+              Caixa Real
+            </p>
+          </div>
+          <p className="text-financial-xl glow-green">
+            {formatarMoeda(dados.caixaReal)}
+          </p>
+          <p className="text-[10px] mt-1 font-mono" style={{ color: 'hsl(215, 15%, 45%)' }}>
+            após compromissos próximos 7 dias
+          </p>
+        </div>
+      </div>
+
+      {/* ══ PRÓXIMOS PASSOS ════════════════════════════════════ */}
+      {dados.recomendacoes.length > 0 && (
+        <div className="surface-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ChevronRight className="h-4 w-4" style={{ color: GREEN }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'hsl(210, 20%, 88%)' }}>
+              Próximos Passos
+            </h3>
+            <span className="text-xs font-mono px-1.5 py-0.5 rounded ml-auto" style={{
+              background: `${GREEN}15`, color: GREEN
+            }}>
+              {dados.recomendacoes.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {dados.recomendacoes.slice(0, 3).map(rec => {
+              const borderColor = rec.prioridade === 1 ? GREEN : rec.prioridade === 2 ? AMBER : 'hsl(215,15%,25%)';
+              return (
+                <div
+                  key={rec.id}
+                  className="flex items-start gap-3 p-3 rounded-lg"
+                  style={{
+                    background: 'hsl(220,15%,9%)',
+                    borderLeft: `3px solid ${borderColor}`,
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium" style={{ color: 'hsl(210, 20%, 90%)' }}>
+                      {rec.titulo}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'hsl(215, 15%, 55%)' }}>
+                      {rec.descricao}
+                    </p>
+                    {rec.impactoEstimado && rec.impactoEstimado > 0 && (
+                      <p className="text-xs mt-1 font-mono font-bold" style={{ color: AMBER }}>
+                        Impacto estimado: {formatarMoeda(rec.impactoEstimado)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onNavigate(rec.acao)}
+                    className="text-xs font-medium flex items-center gap-0.5 shrink-0 hover:opacity-80 transition-opacity"
+                    style={{ color: borderColor }}
+                  >
+                    Agir <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ══ ALERTAS INTELIGENTES ══════════════════════════════ */}
       {dados.alertas.length > 0 && (
