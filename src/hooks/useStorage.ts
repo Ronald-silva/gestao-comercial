@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from '@/lib/firebase';
+import { reportFirestoreListenError } from '@/lib/reportFirestoreListenError';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
@@ -39,28 +40,35 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     const docRef = doc(db, 'users', userId, 'data', key);
     
     // Inicia ouvindo a nuvem
-    const unsubFocus = onSnapshot(docRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        if (data && data.items) {
-          setStoredValue(data.items as T);
-          // Atualizar local storage silenciosamente para backup
-          window.localStorage.setItem(key, JSON.stringify(data.items));
-        }
-      } else {
-        // Se o doc não existe, mas temos dados no LocalStorage, vamos fazer o UPLOAD INICIAL da migração!
-        const localItem = window.localStorage.getItem(key);
-        if (localItem && localItem !== '[]' && localItem !== '{}') {
-          try {
-            const parsed = JSON.parse(localItem);
-            await setDoc(docRef, { items: parsed });
-            setStoredValue(parsed as T);
-          } catch (e) {
-            console.error("Erro na migração inicial para nuvem", e);
+    const unsubFocus = onSnapshot(
+      docRef,
+      async (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data && data.items) {
+            setStoredValue(data.items as T);
+            // Atualizar local storage silenciosamente para backup
+            window.localStorage.setItem(key, JSON.stringify(data.items));
+          }
+        } else {
+          // Se o doc não existe, mas temos dados no LocalStorage, vamos fazer o UPLOAD INICIAL da migração!
+          const localItem = window.localStorage.getItem(key);
+          if (localItem && localItem !== '[]' && localItem !== '{}') {
+            try {
+              const parsed = JSON.parse(localItem);
+              await setDoc(docRef, { items: parsed });
+              setStoredValue(parsed as T);
+            } catch (e) {
+              console.error("Erro na migração inicial para nuvem", e);
+            }
           }
         }
+      },
+      (err) => {
+        console.error('Firestore (listener):', err);
+        reportFirestoreListenError(err);
       }
-    });
+    );
 
     return () => unsubFocus();
   }, [key, userId]);
