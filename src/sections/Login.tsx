@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { DollarSign, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
+import { DollarSign, ShieldAlert, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,26 +62,44 @@ export function Login() {
               </div>
             )}
             
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#8b92a5] uppercase tracking-wider">Email</label>
-              <input 
-                type="email" 
+            <div className="space-y-2">
+              <label htmlFor="login-email" className="block text-xs font-semibold text-[#8b92a5] uppercase tracking-wider">
+                Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="input-dark w-full h-11 text-base placeholder:text-[#4b5563]"
+                className="input-dark box-border w-full min-w-0 h-11 px-3.5 text-base leading-normal placeholder:text-[#4b5563]"
                 placeholder="seu@dominio.com"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#8b92a5] uppercase tracking-wider">Senha Secreta</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="input-dark w-full h-11 text-base placeholder:text-[#4b5563]"
-                placeholder="••••••••"
-              />
+            <div className="space-y-2">
+              <label htmlFor="login-password" className="block text-xs font-semibold text-[#8b92a5] uppercase tracking-wider">
+                Senha
+              </label>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="input-dark box-border w-full min-w-0 h-11 pl-3.5 pr-11 text-base leading-normal placeholder:text-[#4b5563]"
+                  placeholder="Digite sua senha"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-r-[calc(var(--radius)-2px)] text-[#8b92a5] transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#f59e0b]/50"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={2} /> : <Eye className="h-4 w-4" strokeWidth={2} />}
+                </button>
+              </div>
             </div>
 
             <button 
