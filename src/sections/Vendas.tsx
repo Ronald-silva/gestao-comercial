@@ -16,7 +16,7 @@ interface VendasProps {
   produtos: Produto[];
   vendas: Venda[];
   onAdicionar: (venda: Omit<Venda, 'id' | 'criadoEm' | 'pagamento'>) => void;
-  onAdicionarEmprestimo: (dados: Omit<Emprestimo, 'id' | 'criadoEm' | 'pagamento' | 'taxaJuros' | 'valorTotal'>) => void;
+  onAdicionarEmprestimo: (dados: Omit<Emprestimo, 'id' | 'criadoEm' | 'pagamento' | 'valorTotal' | 'valorJurosPeriodico'>) => void;
   onRegistrarPagamento: (vendaId: string, valor: number, data: string, obs?: string) => void;
   onVerRecibo: (venda: Venda) => void;
 }
@@ -126,8 +126,10 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
     if (incluirEmprestimo && parseFloat(dadosEmprestimo.valorSolicitado) > 0) {
       onAdicionarEmprestimo({
         clienteNome: dadosVenda.clienteNome,
-        valorSolicitado: parseFloat(dadosEmprestimo.valorSolicitado),
-        dataEmprestimo: dadosVenda.dataVenda,
+        tipoModalidade: 'amortizado',
+        taxaJuros: 0.20,
+        valorConcedido: parseFloat(dadosEmprestimo.valorSolicitado),
+        dataConcessao: dadosVenda.dataVenda,
         dataVencimento: dadosEmprestimo.dataVencimento,
         observacoes: `Empréstimo vinculado à venda de ${dadosVenda.dataVenda}`,
         status: 'pendente',
@@ -174,9 +176,9 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
         <TabsContent value="nova">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Esquerda: Adicionar Produtos */}
-            <Card className="lg:col-span-1 border-t-4 border-t-blue-500">
+            <Card className="surface-card lg:col-span-1 border-t-4 border-t-blue-500 border-l-0 border-r-0 border-b-0">
               <CardHeader>
-                <CardTitle className="text-lg">1. Adicionar Produtos</CardTitle>
+                <CardTitle className="text-lg text-white">1. Adicionar Produtos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -205,7 +207,7 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
 
                 {produtoSelecionado && (
                   <div className={`p-3 rounded-lg border ${
-                    produtoSelecionado.quantidade === 0 ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+                    produtoSelecionado.quantidade === 0 ? 'bg-[#351010] border-red-900/50 text-[#ef4444]' : 'bg-[#101b35] border-blue-900/50 text-[#60a5fa]'
                   }`}>
                     <p className="text-sm font-medium">
                       Estoque: {produtoSelecionado.quantidade} | Preço: {formatarMoeda(produtoSelecionado.precoVenda)}
@@ -236,11 +238,11 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
             </Card>
 
             {/* Centro/Direita: Carrinho e Finalização */}
-            <Card className="lg:col-span-2 border-t-4 border-t-green-500 flex flex-col h-full">
+            <Card className="surface-card lg:col-span-2 border-t-4 border-t-green-500 border-l-0 border-r-0 border-b-0 flex flex-col h-full">
               <CardHeader>
-                <CardTitle className="text-lg flex justify-between items-center">
+                <CardTitle className="text-lg flex justify-between items-center text-white">
                   <span>2. Carrinho e Pagamento</span>
-                  <Badge variant="secondary" className="text-base px-3 py-1">
+                  <Badge variant="secondary" className="text-base px-3 py-1 bg-[#2a2d36] text-white border-none">
                     Total: {formatarMoeda(valorTotalCarrinho)}
                   </Badge>
                 </CardTitle>
@@ -248,30 +250,30 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
               <CardContent className="flex-1 flex flex-col gap-6">
                 
                 {/* Tabela Carrinho */}
-                <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[150px]">
+                <div className="border border-[#ffffff10] rounded-md overflow-hidden surface-card-2 min-h-[150px]">
                   {carrinho.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center p-8 text-gray-400">
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-[#8b92a5]">
                       <ShoppingCart className="w-12 h-12 mb-2 opacity-20" />
                       <p>O carrinho está vazio</p>
                     </div>
                   ) : (
                     <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Produto</TableHead>
-                          <TableHead className="w-20 text-center">Qtd</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
+                      <TableHeader className="bg-[#00000020]">
+                        <TableRow className="border-[#ffffff10]">
+                          <TableHead className="text-[#8b92a5]">Produto</TableHead>
+                          <TableHead className="w-20 text-center text-[#8b92a5]">Qtd</TableHead>
+                          <TableHead className="text-right text-[#8b92a5]">Total</TableHead>
                           <TableHead className="w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {carrinho.map((item, idx) => (
-                          <TableRow key={idx} className="bg-white">
-                            <TableCell className="font-medium">{item.produtoNome}</TableCell>
-                            <TableCell className="text-center">{item.quantidade}</TableCell>
-                            <TableCell className="text-right">{formatarMoeda(item.quantidade * item.precoUnitario)}</TableCell>
+                          <TableRow key={idx} className="border-[#ffffff10] hover:bg-[#ffffff05]">
+                            <TableCell className="font-medium text-[#d1d5db]">{item.produtoNome}</TableCell>
+                            <TableCell className="text-center text-[#9ca3af]">{item.quantidade}</TableCell>
+                            <TableCell className="text-right text-[#9ca3af]">{formatarMoeda(item.quantidade * item.precoUnitario)}</TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => removerDoCarrinho(idx)} className="text-red-500 hover:text-red-700 h-8 w-8 p-0">
+                              <Button variant="ghost" size="sm" onClick={() => removerDoCarrinho(idx)} className="text-[#ef4444] hover:text-[#f87171] hover:bg-[#ef4444]/10 h-8 w-8 p-0">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </TableCell>
@@ -286,22 +288,24 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                 <form id="form-venda" onSubmit={finalizarVenda} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="cliente">Nome do Cliente *</Label>
+                      <Label htmlFor="cliente" className="text-[#d1d5db]">Nome do Cliente *</Label>
                       <Input 
                         id="cliente" 
                         value={dadosVenda.clienteNome}
                         onChange={e => setDadosVenda({...dadosVenda, clienteNome: e.target.value})}
                         required
                         placeholder="Ex: João Silva"
+                        className="input-dark mt-1 border-none"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="contato">Contato</Label>
+                      <Label htmlFor="contato" className="text-[#d1d5db]">Contato</Label>
                       <Input 
                         id="contato" 
                         value={dadosVenda.clienteContato}
                         onChange={e => setDadosVenda({...dadosVenda, clienteContato: e.target.value})}
                         placeholder="(00) 00000-0000"
+                        className="input-dark mt-1 border-none"
                       />
                     </div>
                   </div>
@@ -309,24 +313,26 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label>Data</Label>
+                        <Label className="text-[#d1d5db]">Data</Label>
                         <Input 
                           type="date" 
                           value={dadosVenda.dataVenda}
                           onChange={e => setDadosVenda({...dadosVenda, dataVenda: e.target.value})}
                           required
+                          className="input-dark mt-1 border-none"
+                          style={{ colorScheme: 'dark' }}
                         />
                       </div>
                       <div>
-                        <Label>Pagamento *</Label>
+                        <Label className="text-[#d1d5db]">Pagamento *</Label>
                         <Select 
                           value={dadosVenda.formaPagamento} 
                           onValueChange={(v) => setDadosVenda({ ...dadosVenda, formaPagamento: v as FormaPagamento })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="input-dark border-none mt-1">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-[#1a1b23] border-[#374151] text-white">
                             <SelectItem value="pix">PIX</SelectItem>
                             <SelectItem value="dinheiro">Dinheiro</SelectItem>
                             <SelectItem value="cartao">Cartão</SelectItem>
@@ -338,39 +344,41 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
 
                     {(dadosVenda.formaPagamento === 'parcelado' || dadosVenda.formaPagamento === 'cartao') && (
                       <div>
-                        <Label>Parcelas</Label>
+                        <Label className="text-[#d1d5db]">Parcelas</Label>
                         <Input
                           type="number"
                           min="1"
                           max="12"
                           value={dadosVenda.numeroParcelas}
                           onChange={(e) => setDadosVenda({ ...dadosVenda, numeroParcelas: e.target.value })}
+                          className="input-dark mt-1 border-none"
                         />
                       </div>
                     )}
                   </div>
                   
                   <div className="md:col-span-2">
-                    <Label>Observações</Label>
+                    <Label className="text-[#d1d5db]">Observações</Label>
                     <Input
                       value={dadosVenda.observacoes}
                       onChange={e => setDadosVenda({...dadosVenda, observacoes: e.target.value})}
+                      className="input-dark mt-1 border-none"
                     />
                   </div>
                 </form>
 
                 {/* Seção opcional: Empréstimo na mesma transação */}
-                <div className={`rounded-lg border-2 transition-colors ${incluirEmprestimo ? 'border-indigo-300 bg-indigo-50' : 'border-dashed border-gray-200 bg-gray-50'}`}>
+                <div className={`rounded-lg border-2 transition-colors ${incluirEmprestimo ? 'border-[#8b5cf6] bg-[#8b5cf6]/10' : 'border-dashed border-[#ffffff20] bg-transparent'}`}>
                   <button
                     type="button"
                     className="w-full flex items-center gap-2 p-3 text-left"
                     onClick={() => setIncluirEmprestimo(!incluirEmprestimo)}
                   >
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${incluirEmprestimo ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400'}`}>
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${incluirEmprestimo ? 'bg-[#8b5cf6] border-[#8b5cf6]' : 'border-[#4b5563]'}`}>
                       {incluirEmprestimo && <CheckCircle className="w-3 h-3 text-white" />}
                     </div>
-                    <HandCoins className={`w-4 h-4 shrink-0 ${incluirEmprestimo ? 'text-indigo-600' : 'text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${incluirEmprestimo ? 'text-indigo-700' : 'text-gray-500'}`}>
+                    <HandCoins className={`w-4 h-4 shrink-0 ${incluirEmprestimo ? 'text-[#a78bfa]' : 'text-[#9ca3af]'}`} />
+                    <span className={`text-sm font-medium ${incluirEmprestimo ? 'text-[#c4b5fd]' : 'text-[#9ca3af]'}`}>
                       Incluir também um empréstimo em dinheiro para esta cliente
                     </span>
                   </button>
@@ -378,9 +386,9 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                   {incluirEmprestimo && (
                     <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label>Valor Emprestado (R$) *</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-gray-500 text-sm">R$</span>
+                        <Label className="text-[#d1d5db]">Valor Emprestado (R$) *</Label>
+                        <div className="relative mt-1">
+                          <span className="absolute left-3 top-2.5 text-[#9ca3af] text-sm">R$</span>
                           <Input
                             type="number"
                             step="0.01"
@@ -388,34 +396,36 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                             placeholder="0,00"
                             value={dadosEmprestimo.valorSolicitado}
                             onChange={e => setDadosEmprestimo({ ...dadosEmprestimo, valorSolicitado: e.target.value })}
-                            className="pl-8"
+                            className="pl-8 input-dark border-none"
                           />
                         </div>
-                        <p className="text-xs text-indigo-600 mt-1">+20% de juros será aplicado automaticamente</p>
+                        <p className="text-xs text-[#a78bfa] mt-1">+20% de juros será aplicado automaticamente</p>
                       </div>
                       <div>
-                        <Label>Vencimento do Empréstimo *</Label>
+                        <Label className="text-[#d1d5db]">Vencimento do Empréstimo *</Label>
                         <Input
                           type="date"
                           value={dadosEmprestimo.dataVencimento}
                           onChange={e => setDadosEmprestimo({ ...dadosEmprestimo, dataVencimento: e.target.value })}
+                          className="input-dark mt-1 border-none"
+                          style={{ colorScheme: 'dark' }}
                         />
                       </div>
                     </div>
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="bg-gray-50 border-t p-4 flex justify-end gap-3">
+              <CardFooter className="surface-card-2 border-t border-[#ffffff10] p-4 flex justify-end gap-3 mt-auto">
                  <Button variant="outline" type="button" onClick={() => {
                    setCarrinho([]);
                    setItemAtual({...itemAtual, produtoId: ''});
-                 }}>
+                 }} className="border-gray-700 bg-transparent text-gray-300 hover:bg-gray-800 hover:text-white">
                    Limpar
                  </Button>
                  <Button 
                    type="submit" 
                    form="form-venda" 
-                   className="bg-green-600 hover:bg-green-700 min-w-[150px]"
+                   className="bg-[#10b981] hover:bg-[#059669] text-white min-w-[150px]"
                    disabled={carrinho.length === 0 || !dadosVenda.clienteNome}
                  >
                    <CheckCircle className="w-4 h-4 mr-2" /> Finalizar Venda
@@ -427,25 +437,25 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
 
         {/* ABA HISTÓRICO */}
         <TabsContent value="historico">
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <CardTitle>Histórico de Transações</CardTitle>
+                <CardTitle className="text-white">Histórico de Transações</CardTitle>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-60">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[#9ca3af]" />
                     <Input 
                       placeholder="Buscar por cliente ou produto..." 
-                      className="pl-9" 
+                      className="pl-9 input-dark border-none" 
                       value={busca}
                       onChange={e => setBusca(e.target.value)}
                     />
                   </div>
                   <Select value={statusFiltro} onValueChange={setStatusFiltro}>
-                    <SelectTrigger className="w-[130px]">
+                    <SelectTrigger className="w-[130px] input-dark border-none">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1a1b23] border-[#374151] text-white">
                       <SelectItem value="todas">Todos</SelectItem>
                       <SelectItem value="pago">Pago</SelectItem>
                       <SelectItem value="pendente">Pendente</SelectItem>
@@ -455,62 +465,62 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border border-[#ffffff10] overflow-hidden">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Resumo</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                  <TableHeader className="bg-[#00000020]">
+                    <TableRow className="border-[#ffffff10]">
+                      <TableHead className="text-[#8b92a5]">Data</TableHead>
+                      <TableHead className="text-[#8b92a5]">Cliente</TableHead>
+                      <TableHead className="text-[#8b92a5]">Resumo</TableHead>
+                      <TableHead className="text-right text-[#8b92a5]">Total</TableHead>
+                      <TableHead className="text-center text-[#8b92a5]">Status</TableHead>
+                      <TableHead className="text-right text-[#8b92a5]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {vendasFiltradas.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableRow className="border-[#ffffff10] hover:bg-transparent">
+                        <TableCell colSpan={6} className="text-center py-8 text-[#8b92a5]">
                           Nenhuma venda encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
                       vendasFiltradas.map((venda) => (
-                        <TableRow key={venda.id}>
-                          <TableCell className="whitespace-nowrap">{formatarData(venda.dataVenda)}</TableCell>
+                        <TableRow key={venda.id} className="border-[#ffffff10] hover:bg-[#ffffff05]">
+                          <TableCell className="whitespace-nowrap text-[#d1d5db]">{formatarData(venda.dataVenda)}</TableCell>
                           <TableCell>
-                            <div className="font-medium">{venda.clienteNome}</div>
-                            <div className="text-xs text-gray-500">{venda.clienteContato}</div>
+                            <div className="font-medium text-white">{venda.clienteNome}</div>
+                            <div className="text-xs text-[#9ca3af]">{venda.clienteContato}</div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">
+                            <div className="text-sm text-[#d1d5db]">
                               {venda.itens?.length || 0} itens
                             </div>
-                            <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                            <div className="text-xs text-[#8b92a5] truncate max-w-[200px]">
                               {venda.itens?.map(i => i.produtoNome).join(', ')}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium text-white">
                             {formatarMoeda(venda.valorTotal)}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant={venda.pagamento.status === 'pago' ? 'default' : 'secondary'} className={
-                              venda.pagamento.status === 'pago' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                              venda.pagamento.status === 'pago' ? 'bg-[#10b981]/10 text-[#10b981] border-none hover:bg-[#10b981]/20' : 'bg-[#f59e0b]/10 text-[#f59e0b] border-none hover:bg-[#f59e0b]/20'
                             }>
                               {statusPagamento[venda.pagamento.status].label}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)}>
-                                <Eye className="w-4 h-4 text-blue-500" />
+                              <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)} className="hover:bg-[#ffffff05]">
+                                <Eye className="w-4 h-4 text-[#3b82f6]" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => onVerRecibo(venda)}>
-                                <Receipt className="w-4 h-4 text-purple-500" />
+                              <Button variant="ghost" size="icon" onClick={() => onVerRecibo(venda)} className="hover:bg-[#ffffff05]">
+                                <Receipt className="w-4 h-4 text-[#a855f7]" />
                               </Button>
                               {venda.pagamento.status !== 'pago' && (
-                                <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)}>
-                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                <Button variant="ghost" size="icon" onClick={() => setModalDetalhes(venda)} className="hover:bg-[#ffffff05]">
+                                  <CheckCircle className="w-4 h-4 text-[#10b981]" />
                                 </Button>
                               )}
                             </div>
@@ -528,32 +538,32 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
 
       {/* MODAL DETALHES FINANCEIROS REFORMULADO */}
       <Dialog open={!!modalDetalhes} onOpenChange={() => setModalDetalhes(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Gerenciar Pagamento</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-[700px] surface-card border-none text-white overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="text-xl">Gerenciar Pagamento</DialogTitle>
+            <DialogDescription className="text-[#8b92a5]">
               Registre pagamentos parciais ou totais para esta venda.
             </DialogDescription>
           </DialogHeader>
           {modalDetalhes && (
-            <div className="space-y-6">
+            <div className="p-6 pt-2 space-y-6">
               {/* Resumo */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 surface-card-2 border border-[#ffffff10] rounded-lg">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">Cliente</p>
-                  <p className="font-medium truncate">{modalDetalhes.clienteNome}</p>
+                  <p className="text-xs text-[#8b92a5] uppercase">Cliente</p>
+                  <p className="font-medium truncate text-white">{modalDetalhes.clienteNome}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">Total Venda</p>
-                  <p className="font-medium text-blue-600">{formatarMoeda(modalDetalhes.valorTotal)}</p>
+                  <p className="text-xs text-[#8b92a5] uppercase">Total Venda</p>
+                  <p className="font-medium text-[#3b82f6]">{formatarMoeda(modalDetalhes.valorTotal)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">Já Recebido</p>
-                  <p className="font-medium text-green-600">{formatarMoeda(modalDetalhes.pagamento.valorRecebido)}</p>
+                  <p className="text-xs text-[#8b92a5] uppercase">Já Recebido</p>
+                  <p className="font-medium text-[#10b981]">{formatarMoeda(modalDetalhes.pagamento.valorRecebido)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase">A Receber</p>
-                  <p className="font-bold text-orange-600">
+                  <p className="text-xs text-[#8b92a5] uppercase">A Receber</p>
+                  <p className="font-bold text-[#f59e0b]">
                     {formatarMoeda(modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido)}
                   </p>
                 </div>
@@ -562,12 +572,12 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Lado Esquerdo: Novo Pagamento */}
                 <div className="space-y-4">
-                  <h4 className="font-medium border-b pb-2 flex items-center gap-2">
+                  <h4 className="font-medium border-b border-[#ffffff10] pb-2 flex items-center gap-2 text-white">
                     <Plus className="w-4 h-4" /> Registrar Pagamento
                   </h4>
                   
                   {modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido <= 0.01 ? (
-                    <div className="p-4 bg-green-100 text-green-800 rounded-md text-center">
+                    <div className="p-4 bg-[#10b981]/10 text-[#10b981] rounded-md text-center border border-[#10b981]/20">
                       <CheckCircle className="w-8 h-8 mx-auto mb-2" />
                       <p className="font-bold">Venda Quitada!</p>
                       <p className="text-sm">Não há débitos pendentes.</p>
@@ -587,29 +597,29 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                       }}
                     >
                       <div>
-                        <Label>Valor do Pagamento</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
+                        <Label className="text-[#d1d5db]">Valor do Pagamento</Label>
+                        <div className="relative mt-1">
+                          <span className="absolute left-3 top-2.5 text-[#9ca3af]">R$</span>
                           <Input 
                             name="valor"
                             type="number" 
                             step="0.01" 
                             max={modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido}
                             defaultValue={(modalDetalhes.valorTotal - modalDetalhes.pagamento.valorRecebido).toFixed(2)}
-                            className="pl-8 font-bold text-lg"
+                            className="pl-8 font-bold text-lg input-dark border-none"
                             required 
                           />
                         </div>
                       </div>
                       <div>
-                        <Label>Data do Pagamento</Label>
-                        <Input name="data" type="date" defaultValue={new Date().toISOString().split('T')[0]} required />
+                        <Label className="text-[#d1d5db]">Data do Pagamento</Label>
+                        <Input name="data" type="date" defaultValue={new Date().toISOString().split('T')[0]} required className="input-dark mt-1 border-none" style={{ colorScheme: 'dark' }} />
                       </div>
                       <div>
-                        <Label>Observação (Opcional)</Label>
-                        <Input name="obs" placeholder="Ex: Pix, Adiantamento..." />
+                        <Label className="text-[#d1d5db]">Observação (Opcional)</Label>
+                        <Input name="obs" placeholder="Ex: Pix, Adiantamento..." className="input-dark mt-1 border-none" />
                       </div>
-                      <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                      <Button type="submit" className="w-full bg-[#10b981] hover:bg-[#059669] text-white">
                         Confirmar Baixa
                       </Button>
                     </form>
@@ -626,16 +636,16 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                     
                     <TabsContent value="historico" className="space-y-3 mt-4">
                       {(!modalDetalhes.pagamento.lancamentos || modalDetalhes.pagamento.lancamentos.length === 0) ? (
-                        <p className="text-center text-gray-500 text-sm py-4">Nenhum pagamento registrado.</p>
+                        <p className="text-center text-[#8b92a5] text-sm py-4">Nenhum pagamento registrado.</p>
                       ) : (
                         modalDetalhes.pagamento.lancamentos.map((lanc, i) => (
-                          <div key={i} className="flex justify-between items-center p-2 bg-white border rounded shadow-sm">
+                          <div key={i} className="flex justify-between items-center p-3 surface-card-2 border border-[#ffffff10] rounded-lg">
                             <div>
-                              <p className="font-bold text-green-700">{formatarMoeda(lanc.valor)}</p>
-                              <p className="text-xs text-gray-500">{formatarData(lanc.data)}</p>
+                              <p className="font-bold text-[#10b981]">{formatarMoeda(lanc.valor)}</p>
+                              <p className="text-xs text-[#9ca3af]">{formatarData(lanc.data)}</p>
                             </div>
                             {lanc.observacao && (
-                              <p className="text-xs text-gray-400 italic max-w-[100px] truncate">{lanc.observacao}</p>
+                              <p className="text-xs text-[#8b92a5] italic max-w-[100px] truncate">{lanc.observacao}</p>
                             )}
                           </div>
                         ))
@@ -644,17 +654,17 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                     
                     <TabsContent value="parcelas" className="space-y-3 mt-4">
                       {modalDetalhes.pagamento.parcelas?.map((p, i) => (
-                        <div key={i} className={`flex justify-between items-center p-2 border rounded ${p.pago ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                        <div key={i} className={`flex justify-between items-center p-3 border border-[#ffffff10] rounded-lg ${p.pago ? 'bg-[#10b981]/5 border-[#10b981]/20' : 'surface-card-2'}`}>
                           <div>
-                            <span className="text-sm font-medium">Parcela {p.numero}</span>
-                            <p className="text-xs text-gray-500">Venc: {formatarData(p.dataVencimento)}</p>
+                            <span className="text-sm font-medium text-white">Parcela {p.numero}</span>
+                            <p className="text-xs text-[#9ca3af]">Venc: {formatarData(p.dataVencimento)}</p>
                           </div>
                           <div className="text-right">
-                             <p className="font-medium">{formatarMoeda(p.valor)}</p>
+                             <p className="font-medium text-white">{formatarMoeda(p.valor)}</p>
                              {p.pago ? (
-                               <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">Pago</Badge>
+                               <Badge className="bg-[#10b981]/20 text-[#10b981] hover:bg-[#10b981]/30 border-none text-[10px]">Pago</Badge>
                              ) : (
-                               <Badge variant="outline" className="text-[10px]">Pendente</Badge>
+                               <Badge variant="outline" className="text-[10px] text-[#9ca3af] border-[#ffffff20]">Pendente</Badge>
                              )}
                           </div>
                         </div>
@@ -664,9 +674,9 @@ export function Vendas({ produtos, vendas, onAdicionar, onAdicionarEmprestimo, o
                 </div>
               </div>
               
-              <div className="flex gap-2 justify-end border-t pt-4">
-                <Button variant="outline" onClick={() => setModalDetalhes(null)}>Fechar</Button>
-                <Button onClick={() => onVerRecibo(modalDetalhes)}> <Receipt className="w-4 h-4 mr-2" /> Recibo</Button>
+              <div className="flex gap-2 justify-end border-t border-[#ffffff10] pt-4">
+                <Button variant="outline" onClick={() => setModalDetalhes(null)} className="border-gray-700 bg-transparent text-gray-300 hover:bg-gray-800 hover:text-white">Fechar</Button>
+                <Button onClick={() => onVerRecibo(modalDetalhes)} className="bg-[#6366f1] hover:bg-[#4f46e5] text-white"> <Receipt className="w-4 h-4 mr-2" /> Recibo</Button>
               </div>
             </div>
           )}

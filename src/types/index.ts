@@ -1,9 +1,10 @@
-// Tipos do Sistema de Gestão de Vendas
+// Tipos do Sistema — Gestão de Vendas Pro (Capital de Giro)
 
 export type CategoriaProduto = 'roupas' | 'eletronicos' | 'diversos';
 export type FormaPagamento = 'pix' | 'dinheiro' | 'cartao' | 'parcelado';
 export type StatusPagamento = 'pendente' | 'parcial' | 'pago';
 export type StatusVenda = 'pendente' | 'concluida' | 'cancelada';
+export type ScoreCliente = 'rapido' | 'medio' | 'lento' | 'novo';
 
 export interface Produto {
   id: string;
@@ -59,6 +60,7 @@ export interface Venda {
   clienteNome: string;
   clienteContato?: string;
   dataVenda: string;
+  dataPagamento?: string; // data em que foi efetivamente pago
   formaPagamento: FormaPagamento;
   numeroParcelas: number;
   status: StatusVenda;
@@ -74,7 +76,12 @@ export interface Cliente {
   email?: string;
   totalCompras: number;
   valorTotalGasto: number;
+  valorTotalPago: number;
+  valorTotalPendente: number;
   ultimaCompra?: string;
+  tempoMedioPagamento: number; // em dias
+  score: ScoreCliente;
+  limiteCredito?: number; // limite configurável
 }
 
 // Dados analíticos
@@ -84,6 +91,10 @@ export interface DashboardData {
   totalPendente: number;
   totalLucro: number;
   margemLucro: number;
+  capitalDisponivel: number;
+  capitalTravado: number;
+  giroCapital: number;
+  tempoMedioRetorno: number;
   vendasHoje: number;
   vendasSemana: number;
   vendasMes: number;
@@ -98,6 +109,7 @@ export interface ProdutoVendido {
   quantidadeVendida: number;
   lucroTotal: number;
   margemLucro: number;
+  tempoMedioVenda?: number;
 }
 
 export interface RelatorioMensal {
@@ -108,19 +120,33 @@ export interface RelatorioMensal {
   ticketMedio: number;
 }
 
-export interface Emprestimo {
+// ============================================================
+// CRÉDITO A CLIENTES (ex-Empréstimos)
+// Capital adiantado para clientes como ferramenta de fidelização
+// ============================================================
+
+export type TipoCredito = 'amortizado' | 'juros_recorrentes';
+
+export interface CreditoCliente {
   id: string;
   clienteNome: string;
-  valorSolicitado: number;
-  taxaJuros: number;
-  valorTotal: number;
-  dataEmprestimo: string;
-  dataVencimento: string;
-  status: 'pendente' | 'pago';
+  clienteContato?: string;
+  tipoModalidade: TipoCredito;  // amortizado ou recorrente
+  valorConcedido: number;       // valor do crédito dado ao cliente
+  taxaJuros: number;            // % dinâmica (ex: 0.20, 0.05, 0.15)
+  valorJurosPeriodico?: number; // valor fixo gerado a cada ciclo se for recorrente
+  valorTotal: number;           // total a pagar (apenas para amortizado)
+  dataConcessao: string;        // quando foi dado o crédito
+  dataVencimento: string;       // quando deve ser pago ou vencimento do juros
+  status: 'pendente' | 'pago' | 'ativo'; // ativo = recorrente rendendo
   pagamento: Pagamento;
+  finalidade?: string;          // ex: "para reinvestir em produto X"
   observacoes?: string;
   criadoEm: string;
 }
+
+// alias para compatibilidade com código existente
+export type Emprestimo = CreditoCliente;
 
 // ============================================================
 // CAIXA (Controle de Fluxo de Caixa)
@@ -183,4 +209,20 @@ export interface MetaReinvestimento {
   ativa: boolean;
   observacoes?: string;
   criadoEm: string;
+}
+
+// ============================================================
+// ALERTAS INTELIGENTES
+// ============================================================
+
+export type TipoAlerta = 'capital_travado' | 'cliente_risco' | 'reinvestimento' | 'prazo_vencido';
+
+export interface AlertaInteligente {
+  id: string;
+  tipo: TipoAlerta;
+  urgencia: 'alta' | 'media' | 'baixa';
+  titulo: string;
+  descricao: string;
+  valor?: number;
+  acao?: string;
 }

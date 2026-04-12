@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Toaster, toast } from 'sonner';
 import { useDados } from '@/hooks/useDados';
 import { Dashboard } from '@/sections/Dashboard';
@@ -7,81 +6,88 @@ import { Produtos } from '@/sections/Produtos';
 import { Vendas } from '@/sections/Vendas';
 import { Recibo } from '@/sections/Recibo';
 import { Relatorios } from '@/sections/Relatorios';
-import { ExportarDados } from '@/components/ExportarDados';
-import { LembretesContas } from '@/components/LembretesContas';
-import { AlertaEstoque } from '@/components/AlertaEstoque';
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, Receipt, HandCoins, Wallet, ShoppingBag, Target } from 'lucide-react';
-import type { Venda } from '@/types';
+import { Clientes } from '@/sections/Clientes';
 import { Emprestimos } from '@/sections/Emprestimos';
 import { Caixa } from '@/sections/Caixa';
 import { Compras } from '@/sections/Compras';
 import { MetaReinvestimento } from '@/sections/MetaReinvestimento';
+import { ExportarDados } from '@/components/ExportarDados';
+import { AlertaEstoque } from '@/components/AlertaEstoque';
+import { useAuth } from '@/contexts/AuthContext';
+import { Login } from '@/sections/Login';
+import {
+  LayoutDashboard, Package, ShoppingCart, BarChart3,
+  Users, HandCoins, Wallet, ShoppingBag, Target,
+  TrendingUp,
+} from 'lucide-react';
+import type { Venda } from '@/types';
+
+const tabs = [
+  { id: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard, cor: 'amber' },
+  { id: 'vendas',      label: 'Vendas',      icon: ShoppingCart,    cor: 'green' },
+  { id: 'clientes',    label: 'Clientes',    icon: Users,           cor: 'blue' },
+  { id: 'produtos',    label: 'Produtos',    icon: Package,         cor: 'purple' },
+  { id: 'compras',     label: 'Compras',     icon: ShoppingBag,     cor: 'cyan' },
+  { id: 'credito',     label: 'Crédito',     icon: HandCoins,       cor: 'rose' },
+  { id: 'caixa',       label: 'Caixa',       icon: Wallet,          cor: 'teal' },
+  { id: 'metas',       label: 'Metas',       icon: Target,          cor: 'violet' },
+  { id: 'relatorios',  label: 'Relatórios',  icon: BarChart3,       cor: 'orange' },
+];
 
 function App() {
+  const { user, loading: authLoading, logout } = useAuth();
+  
   const {
-    produtos,
-    vendas,
-    adicionarProduto,
-    atualizarProduto,
-    removerProduto,
-    adicionarVenda,
-    registrarPagamento,
+    produtos, vendas, clientes, emprestimos,
+    adicionarProduto, atualizarProduto, removerProduto,
+    adicionarVenda, registrarPagamento,
     getProdutosEstoqueBaixo,
-    getContasAReceber,
-    emprestimos,
-    adicionarEmprestimo,
-    registrarPagamentoEmprestimo,
-    movimentacoes,
-    adicionarMovimentacao,
-    removerMovimentacao,
-    getSaldoCaixa,
-    compras,
-    adicionarCompra,
-    removerCompra,
-    getTotalInvestidoEstoque,
-    metas,
-    adicionarMeta,
-    removerMeta,
-    getMetaAtiva,
-    getProgressoMeta,
+    adicionarEmprestimo, registrarPagamentoEmprestimo,
+    movimentacoes, adicionarMovimentacao, removerMovimentacao, getSaldoCaixa,
+    compras, adicionarCompra, removerCompra, getTotalInvestidoEstoque,
+    metas, adicionarMeta, removerMeta, getMetaAtiva, getProgressoMeta,
+    getCapitalDisponivel, getCapitalTravado,
+    atualizarCliente, removerCliente,
+    limparDados,
   } = useDados();
 
   const [reciboVenda, setReciboVenda] = useState<Venda | null>(null);
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
 
+  // ── Handlers ──────────────────────────────────────────
   const handleAdicionarProduto = (produto: Parameters<typeof adicionarProduto>[0]) => {
     adicionarProduto(produto);
-    toast.success('Produto cadastrado com sucesso!');
+    toast.success('Produto cadastrado!', { description: `${produto.nome} adicionado ao estoque` });
   };
 
   const handleAdicionarVenda = (venda: Parameters<typeof adicionarVenda>[0]) => {
-    // Validar estoque
     for (const item of venda.itens) {
       const produto = produtos.find(p => p.id === item.produtoId);
       if (!produto) continue;
       if (produto.quantidade < item.quantidade) {
-        toast.error(`Estoque insuficiente para ${produto.nome}! Apenas ${produto.quantidade} unidades.`);
+        toast.error('Estoque insuficiente!', {
+          description: `Apenas ${produto.quantidade} unidades de ${produto.nome}`
+        });
         return;
       }
     }
-
     adicionarVenda(venda);
-    toast.success('Venda registrada com sucesso! Estoque atualizado.');
+    toast.success('Venda registrada!', { description: 'Estoque atualizado automaticamente' });
   };
 
   const handleRegistrarPagamento = (vendaId: string, valor: number, data: string, obs?: string) => {
     registrarPagamento(vendaId, valor, data, obs);
-    toast.success('Pagamento registrado com sucesso!');
+    toast.success('Pagamento registrado!', { description: 'Capital atualizado' });
   };
 
   const handleAdicionarEmprestimo = (dados: Parameters<typeof adicionarEmprestimo>[0]) => {
     adicionarEmprestimo(dados);
-    toast.success('Empréstimo registrado com sucesso!');
+    toast.success('Crédito concedido!', { description: `Para ${dados.clienteNome}` });
   };
 
-  const handlePagamentoEmprestimo = (id: string, valor: number, data: string, obs?: string) => {
+  const handlePagamentoCredito = (id: string, valor: number, data: string, obs?: string) => {
     registrarPagamentoEmprestimo(id, valor, data, obs);
-    toast.success('Baixa registrada com sucesso!');
+    toast.success('Recebimento registrado!', { description: 'Capital atualizado' });
   };
 
   const handleAdicionarMovimentacao = (dados: Parameters<typeof adicionarMovimentacao>[0]) => {
@@ -91,129 +97,167 @@ function App() {
 
   const handleAdicionarCompra = (dados: Parameters<typeof adicionarCompra>[0]) => {
     adicionarCompra(dados);
-    toast.success('Compra registrada! Estoque e caixa atualizados.');
+    toast.success('Compra registrada!', { description: 'Estoque e caixa atualizados' });
   };
 
   const handleAdicionarMeta = (dados: Parameters<typeof adicionarMeta>[0]) => {
     adicionarMeta(dados);
-    toast.success('Meta de reinvestimento definida!');
+    toast.success('Meta definida!');
   };
 
-  const handleVerRecibo = (venda: Venda) => {
-    setReciboVenda(venda);
-  };
-
-
-
+  // ── Derived ────────────────────────────────────────────
   const produtosEstoqueBaixo = getProdutosEstoqueBaixo();
-  const contasAReceber = getContasAReceber();
+  const capitalDisponivel = getCapitalDisponivel();
+  const capitalTravado = getCapitalTravado();
+
+  const formatarMoeda = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v);
+
+  // ── Auth Gates ──────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'hsl(220, 20%, 4%)' }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 rounded-full border-2 border-[#10b981] border-t-transparent animate-spin" />
+          <p className="text-sm font-mono text-[#8b92a5] animate-pulse">Sincronizando Cofre...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 min-h-[100dvh]">
-      <Toaster position="top-center" richColors />
-      
-      {/* Header - compacto no mobile */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10 safe-area-inset-top">
+    <div className="min-h-screen min-h-[100dvh]" style={{ background: 'hsl(220, 20%, 4%)' }}>
+      <Toaster
+        position="top-center"
+        richColors
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: 'hsl(220, 18%, 10%)',
+            border: '1px solid hsl(220, 15%, 18%)',
+            color: 'hsl(210, 20%, 94%)',
+          }
+        }}
+      />
+
+      {/* ── Header ──────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 safe-area-inset-top border-b" style={{ 
+        background: 'hsl(220, 20%, 4%)',
+        borderColor: 'hsl(220, 15%, 14%)',
+      }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 sm:h-16 gap-2 min-w-0">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg shrink-0">
-                <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
+          <div className="flex justify-between items-center h-14 gap-3">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{
+                background: 'linear-gradient(135deg, hsl(38, 95%, 54%), hsl(38, 95%, 38%))',
+              }}>
+                <TrendingUp className="h-4 w-4 text-black" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">Gestão de Vendas Pro</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Sistema de controle comercial</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <ExportarDados produtos={produtos} vendas={vendas} />
-              <div className="text-right hidden sm:block">
-                <p className="text-sm text-gray-500">Total em Vendas</p>
-                <p className="text-lg font-bold text-green-600">
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  }).format(vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.valorTotal, 0))}
+                <h1 className="text-sm sm:text-base font-semibold leading-none" style={{ color: 'hsl(210, 20%, 94%)' }}>
+                  Gestão de Vendas <span style={{ color: 'hsl(38, 95%, 54%)' }}>Pro</span>
+                </h1>
+                <p className="text-xs mt-0.5 hidden sm:block" style={{ color: 'hsl(215, 15%, 50%)' }}>
+                  Capital de giro
                 </p>
               </div>
+            </div>
+
+            {/* Capital status — visible no header */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 45%)' }}>Disponível</p>
+                <p className="text-financial-md font-mono glow-green">{formatarMoeda(capitalDisponivel)}</p>
+              </div>
+              <div className="w-px h-8" style={{ background: 'hsl(220, 15%, 14%)' }} />
+              <div className="text-right">
+                <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'hsl(215, 15%, 45%)' }}>Travado</p>
+                <p className="text-financial-md font-mono glow-red">{formatarMoeda(capitalTravado)}</p>
+              </div>
+              <div className="w-px h-8" style={{ background: 'hsl(220, 15%, 14%)' }} />
+              <ExportarDados produtos={produtos} vendas={vendas} />
+            </div>
+
+            {/* Mobile: apenas export */}
+            <div className="flex items-center gap-2 md:hidden">
+              <ExportarDados produtos={produtos} vendas={vendas} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Alertas */}
-      {(produtosEstoqueBaixo.length > 0 || contasAReceber.length > 0) && (
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-            <AlertaEstoque produtos={produtos} />
-            <LembretesContas vendas={vendas} onRegistrarPagamento={handleRegistrarPagamento} />
+      {/* ── Navigation Tabs ─────────────────────────────── */}
+      <div className="sticky z-20 border-b" style={{ 
+        top: '56px', 
+        background: 'hsl(220, 18%, 6%)',
+        borderColor: 'hsl(220, 15%, 12%)',
+      }}>
+        <div className="max-w-7xl mx-auto px-2 sm:px-6">
+          <div className="flex overflow-x-auto gap-0.5 py-1.5 scroll-touch" style={{ scrollbarWidth: 'none' }}>
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              const isActive = abaAtiva === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setAbaAtiva(tab.id)}
+                  className="nav-tab shrink-0 min-w-[58px] sm:min-w-[72px]"
+                  data-state={isActive ? 'active' : 'inactive'}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <Tabs value={abaAtiva} onValueChange={setAbaAtiva} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid grid-cols-4 sm:grid-cols-8 w-full bg-white p-1.5 rounded-xl shadow-sm h-auto gap-1">
-            <TabsTrigger value="dashboard" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 min-h-[52px] rounded-lg w-full">
-              <LayoutDashboard className="h-4 w-4 shrink-0" />
-              <span>Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="produtos" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 min-h-[52px] rounded-lg w-full">
-              <Package className="h-4 w-4 shrink-0" />
-              <span>Produtos</span>
-            </TabsTrigger>
-            <TabsTrigger value="vendas" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-green-100 data-[state=active]:text-green-700 min-h-[52px] rounded-lg w-full">
-              <ShoppingCart className="h-4 w-4 shrink-0" />
-              <span>Vendas</span>
-            </TabsTrigger>
-            <TabsTrigger value="compras" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-cyan-100 data-[state=active]:text-cyan-700 min-h-[52px] rounded-lg w-full">
-              <ShoppingBag className="h-4 w-4 shrink-0" />
-              <span>Compras</span>
-            </TabsTrigger>
-            <TabsTrigger value="caixa" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-teal-100 data-[state=active]:text-teal-700 min-h-[52px] rounded-lg w-full">
-              <Wallet className="h-4 w-4 shrink-0" />
-              <span>Caixa</span>
-            </TabsTrigger>
-            <TabsTrigger value="metas" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-violet-100 data-[state=active]:text-violet-700 min-h-[52px] rounded-lg w-full">
-              <Target className="h-4 w-4 shrink-0" />
-              <span>Metas</span>
-            </TabsTrigger>
-            <TabsTrigger value="relatorios" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 min-h-[52px] rounded-lg w-full">
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              <span>Relatórios</span>
-            </TabsTrigger>
-            <TabsTrigger value="emprestimos" className="flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 min-h-[52px] rounded-lg w-full">
-              <HandCoins className="h-4 w-4 shrink-0" />
-              <span>Emprést.</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard" className="mt-6">
-            <Dashboard produtos={produtos} vendas={vendas} emprestimos={emprestimos} />
-          </TabsContent>
-
-          <TabsContent value="produtos" className="mt-6">
-            <Produtos 
-              produtos={produtos}
-              onAdicionar={handleAdicionarProduto}
-              onAtualizar={atualizarProduto}
-              onRemover={removerProduto}
-            />
-          </TabsContent>
-
-          <TabsContent value="vendas" className="mt-6">
+      {/* ── Content ─────────────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Alerta estoque baixo — dentro do fluxo normal do conteúdo */}
+        {produtosEstoqueBaixo.length > 0 && (
+          <div className="mb-4">
+            <AlertaEstoque produtos={produtos} />
+          </div>
+        )}
+        <div className="animate-slide-up">
+          {abaAtiva === 'dashboard' && (
+            <Dashboard produtos={produtos} vendas={vendas} emprestimos={emprestimos} onNavigate={setAbaAtiva} />
+          )}
+          {abaAtiva === 'vendas' && (
             <Vendas
               produtos={produtos}
               vendas={vendas}
               onAdicionar={handleAdicionarVenda}
               onAdicionarEmprestimo={handleAdicionarEmprestimo}
               onRegistrarPagamento={handleRegistrarPagamento}
-              onVerRecibo={handleVerRecibo}
+              onVerRecibo={setReciboVenda}
             />
-          </TabsContent>
-
-          <TabsContent value="compras" className="mt-6">
+          )}
+          {abaAtiva === 'clientes' && (
+            <Clientes
+              clientes={clientes}
+              vendas={vendas}
+              onAtualizar={atualizarCliente}
+              onRemover={removerCliente}
+              onNavigate={setAbaAtiva}
+            />
+          )}
+          {abaAtiva === 'produtos' && (
+            <Produtos
+              produtos={produtos}
+              onAdicionar={handleAdicionarProduto}
+              onAtualizar={atualizarProduto}
+              onRemover={removerProduto}
+            />
+          )}
+          {abaAtiva === 'compras' && (
             <Compras
               compras={compras}
               produtos={produtos}
@@ -221,9 +265,15 @@ function App() {
               onRemover={removerCompra}
               getTotalInvestidoEstoque={getTotalInvestidoEstoque}
             />
-          </TabsContent>
-
-          <TabsContent value="caixa" className="mt-6">
+          )}
+          {abaAtiva === 'credito' && (
+            <Emprestimos
+              emprestimos={emprestimos}
+              onAdicionar={handleAdicionarEmprestimo}
+              onRegistrarPagamento={handlePagamentoCredito}
+            />
+          )}
+          {abaAtiva === 'caixa' && (
             <Caixa
               movimentacoes={movimentacoes}
               vendas={vendas}
@@ -231,9 +281,8 @@ function App() {
               onRemover={removerMovimentacao}
               getSaldoCaixa={getSaldoCaixa}
             />
-          </TabsContent>
-
-          <TabsContent value="metas" className="mt-6">
+          )}
+          {abaAtiva === 'metas' && (
             <MetaReinvestimento
               metas={metas}
               vendas={vendas}
@@ -243,45 +292,49 @@ function App() {
               getMetaAtiva={getMetaAtiva}
               getProgressoMeta={getProgressoMeta}
             />
-          </TabsContent>
-
-          <TabsContent value="relatorios" className="mt-6">
+          )}
+          {abaAtiva === 'relatorios' && (
             <Relatorios produtos={produtos} vendas={vendas} />
-          </TabsContent>
-
-          <TabsContent value="emprestimos" className="mt-6">
-            <Emprestimos 
-              emprestimos={emprestimos}
-              onAdicionar={handleAdicionarEmprestimo}
-              onRegistrarPagamento={handlePagamentoEmprestimo}
-            />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </main>
 
-      {/* Recibo Modal */}
-      <Recibo 
+      {/* ── Recibo Modal ─────────────────────────────────── */}
+      <Recibo
         venda={reciboVenda}
         aberto={!!reciboVenda}
         onFechar={() => setReciboVenda(null)}
       />
 
-      {/* Footer */}
-      <footer className="bg-white border-t mt-8 sm:mt-12">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 text-center md:text-left">
-            <p className="text-xs sm:text-sm text-gray-500">
-              © 2024 Gestão de Vendas Pro. Seu negócio em crescimento.
+      {/* ── Footer minimal ──────────────────────────────── */}
+      <footer className="border-t mt-8" style={{ borderColor: 'hsl(220, 15%, 12%)' }}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
+          <div className="flex flex-wrap justify-between items-center gap-3">
+            <p className="text-xs font-mono" style={{ color: 'hsl(215, 15%, 40%)' }}>
+              Gestão de Vendas Pro © 2024
             </p>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                <span>{produtos.length} produtos</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                <span>{vendas.filter(v => v.status !== 'cancelada').length} vendas</span>
-              </div>
+            <div className="flex gap-4">
+              <span className="text-xs font-mono" style={{ color: 'hsl(215, 15%, 40%)' }}>
+                <span style={{ color: 'hsl(38, 95%, 54%)' }}>{produtos.length}</span> produtos
+              </span>
+              <span className="text-xs font-mono" style={{ color: 'hsl(215, 15%, 40%)' }}>
+                <span style={{ color: 'hsl(38, 95%, 54%)' }}>{vendas.filter(v => v.status !== 'cancelada').length}</span> vendas
+              </span>
+              <button
+                onClick={limparDados}
+                className="text-xs font-mono hover:underline"
+                style={{ color: 'hsl(352, 100%, 62% / 0.5)' }}
+              >
+                resetar dados
+              </button>
+              <span className="text-xs font-mono" style={{ color: 'hsl(215, 15%, 20%)' }}>|</span>
+              <button
+                onClick={logout}
+                className="text-xs font-mono hover:text-white transition-colors"
+                style={{ color: 'hsl(215, 15%, 40%)' }}
+              >
+                sair da conta
+              </button>
             </div>
           </div>
         </div>

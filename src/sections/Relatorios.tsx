@@ -181,47 +181,47 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
       titulo: 'Total em Vendas',
       valor: formatarMoeda(dados.totalVendas),
       icone: DollarSign,
-      cor: 'text-blue-600',
-      bgCor: 'bg-blue-100',
+      cor: 'text-[#3b82f6]',
+      bgCor: 'bg-[#3b82f6]/10',
     },
     {
       titulo: 'Lucro Total',
       valor: formatarMoeda(dados.totalLucro),
       subvalor: `${dados.margemLucro.toFixed(1)}% margem`,
       icone: TrendingUp,
-      cor: 'text-green-600',
-      bgCor: 'bg-green-100',
+      cor: 'text-[#10b981]',
+      bgCor: 'bg-[#10b981]/10',
     },
     {
       titulo: 'Quantidade de Vendas',
       valor: dados.quantidadeVendas.toString(),
       subvalor: `${formatarMoeda(dados.ticketMedio)} ticket médio`,
       icone: ShoppingCart,
-      cor: 'text-purple-600',
-      bgCor: 'bg-purple-100',
+      cor: 'text-[#a855f7]',
+      bgCor: 'bg-[#a855f7]/10',
     },
     {
       titulo: 'A Receber',
       valor: formatarMoeda(dados.totalPendente),
       icone: TrendingDown,
-      cor: 'text-orange-600',
-      bgCor: 'bg-orange-100',
+      cor: 'text-[#f59e0b]',
+      bgCor: 'bg-[#f59e0b]/10',
     },
   ];
 
   return (
     <div className="space-y-6">
       {/* Filtros */}
-      <Card>
+      <Card className="surface-card border-none">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <Calendar className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Período:</span>
+            <Calendar className="h-5 w-5 text-[#8b92a5]" />
+            <span className="text-sm font-medium text-[#d1d5db]">Período:</span>
             <Select value={periodo} onValueChange={setPeriodo}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48 input-dark border-none">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1a1b23] border-[#374151] text-white">
                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 3 meses</SelectItem>
@@ -236,17 +236,17 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
       {/* Cards Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cardsPrincipais.map((card, index) => (
-          <Card key={index}>
+          <Card key={index} className="surface-card border-none">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">{card.titulo}</CardTitle>
+              <CardTitle className="text-sm font-medium text-[#8b92a5]">{card.titulo}</CardTitle>
               <div className={`p-2 rounded-lg ${card.bgCor}`}>
                 <card.icone className={`h-5 w-5 ${card.cor}`} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{card.valor}</div>
+              <div className="text-2xl font-bold text-white">{card.valor}</div>
               {card.subvalor && (
-                <p className="text-xs text-gray-500 mt-1">{card.subvalor}</p>
+                <p className="text-xs text-[#8b92a5] mt-1">{card.subvalor}</p>
               )}
             </CardContent>
           </Card>
@@ -255,28 +255,28 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
 
       {/* Abas */}
       <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="produtos">Produtos</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-          <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+        <TabsList className="grid grid-cols-4 w-full bg-[#1a1b23] p-1 rounded-lg border border-[#ffffff10]">
+          <TabsTrigger value="geral" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Geral</TabsTrigger>
+          <TabsTrigger value="produtos" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Produtos</TabsTrigger>
+          <TabsTrigger value="clientes" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Clientes</TabsTrigger>
+          <TabsTrigger value="pagamentos" className="data-[state=active]:bg-[#2a2d36] data-[state=active]:text-white text-[#8b92a5]">Pagamentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-4">
           {/* Evolução Diária */}
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
-              <CardTitle>Evolução dos Últimos 7 Dias</CardTitle>
+              <CardTitle className="text-white">Evolução dos Últimos 7 Dias</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {dados.evolucaoDiaria.map((dia, index) => (
                   <div key={index} className="flex items-center gap-4">
-                    <div className="w-20 text-sm text-gray-600 capitalize">{dia.data}</div>
+                    <div className="w-20 text-sm text-[#8b92a5] capitalize">{dia.data}</div>
                     <div className="flex-1">
-                      <div className="h-8 bg-gray-100 rounded-lg overflow-hidden flex">
+                      <div className="h-8 bg-[#ffffff10] rounded-lg overflow-hidden flex">
                         <div 
-                          className="bg-blue-500 h-full flex items-center justify-end px-2"
+                          className="bg-[#3b82f6] h-full flex items-center justify-end px-2 transition-all duration-500 ease-out"
                           style={{ width: `${Math.max(5, (dia.valor / Math.max(...dados.evolucaoDiaria.map(d => d.valor))) * 100)}%` }}
                         >
                           {dia.valor > 0 && (
@@ -287,7 +287,7 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="w-16 text-right text-sm text-gray-500">
+                    <div className="w-16 text-right text-sm text-[#8b92a5]">
                       {dia.quantidade} venda{dia.quantidade !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -297,26 +297,26 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
           </Card>
 
           {/* Vendas por Categoria */}
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
-              <CardTitle>Performance por Categoria</CardTitle>
+              <CardTitle className="text-white">Performance por Categoria</CardTitle>
             </CardHeader>
             <CardContent>
               {dados.vendasPorCategoria.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhuma venda no período</p>
+                <p className="text-[#8b92a5] text-center py-4">Nenhuma venda no período</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {dados.vendasPorCategoria.map((cat) => {
                     const catInfo = categorias[cat.categoria as keyof typeof categorias];
                     return (
-                      <div key={cat.categoria} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
+                      <div key={cat.categoria} className="p-4 surface-card-2 border border-[#ffffff10] rounded-lg">
+                        <div className="flex items-center gap-2 mb-2 text-white">
                           <span>{catInfo.icone}</span>
                           <span className="font-medium">{catInfo.label}</span>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">{formatarMoeda(cat.valor)}</p>
-                        <p className="text-sm text-gray-500">{cat.quantidade} itens vendidos</p>
-                        <p className="text-sm text-green-600 mt-1">Lucro: {formatarMoeda(cat.lucro)}</p>
+                        <p className="text-2xl font-bold text-white">{formatarMoeda(cat.valor)}</p>
+                        <p className="text-sm text-[#8b92a5]">{cat.quantidade} itens vendidos</p>
+                        <p className="text-sm text-[#10b981] mt-1">Lucro: {formatarMoeda(cat.lucro)}</p>
                       </div>
                     );
                   })}
@@ -327,29 +327,29 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
         </TabsContent>
 
         <TabsContent value="produtos">
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
-              <CardTitle>Top 10 Produtos Mais Vendidos</CardTitle>
+              <CardTitle className="text-white">Top 10 Produtos Mais Vendidos</CardTitle>
             </CardHeader>
             <CardContent>
               {dados.produtosMaisVendidos.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhuma venda no período</p>
+                <p className="text-[#8b92a5] text-center py-4">Nenhuma venda no período</p>
               ) : (
                 <div className="space-y-3">
                   {dados.produtosMaisVendidos.map((produto, index) => (
-                    <div key={produto.produtoId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={produto.produtoId} className="flex items-center justify-between p-3 surface-card-2 border border-[#ffffff10] rounded-lg">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white text-sm font-bold rounded-full">
+                        <span className="flex items-center justify-center w-8 h-8 bg-[#3b82f6]/20 text-[#3b82f6] text-sm font-bold rounded-full">
                           {index + 1}
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{produto.produtoNome}</p>
-                          <p className="text-xs text-gray-500">{produto.quantidade} vendidos</p>
+                          <p className="font-medium text-white">{produto.produtoNome}</p>
+                          <p className="text-xs text-[#8b92a5]">{produto.quantidade} vendidos</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{formatarMoeda(produto.valor)}</p>
-                        <p className="text-xs text-green-600">Lucro: {formatarMoeda(produto.lucro)}</p>
+                        <p className="font-semibold text-white">{formatarMoeda(produto.valor)}</p>
+                        <p className="text-xs text-[#10b981]">Lucro: {formatarMoeda(produto.lucro)}</p>
                       </div>
                     </div>
                   ))}
@@ -360,29 +360,29 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
         </TabsContent>
 
         <TabsContent value="clientes">
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
-              <CardTitle>Top 10 Clientes Mais Valiosos</CardTitle>
+              <CardTitle className="text-white">Top 10 Clientes Mais Valiosos</CardTitle>
             </CardHeader>
             <CardContent>
               {dados.clientesMaisValiosos.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhuma venda no período</p>
+                <p className="text-[#8b92a5] text-center py-4">Nenhuma venda no período</p>
               ) : (
                 <div className="space-y-3">
                   {dados.clientesMaisValiosos.map((cliente, index) => (
-                    <div key={cliente.nome} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={cliente.nome} className="flex items-center justify-between p-3 surface-card-2 border border-[#ffffff10] rounded-lg">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 bg-purple-600 text-white text-sm font-bold rounded-full">
+                        <span className="flex items-center justify-center w-8 h-8 bg-[#8b5cf6]/20 text-[#a78bfa] text-sm font-bold rounded-full">
                           {index + 1}
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{cliente.nome}</p>
-                          <p className="text-xs text-gray-500">{cliente.contato}</p>
+                          <p className="font-medium text-white">{cliente.nome}</p>
+                          <p className="text-xs text-[#8b92a5]">{cliente.contato}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{formatarMoeda(cliente.valor)}</p>
-                        <p className="text-xs text-gray-500">{cliente.compras} compra{cliente.compras !== 1 ? 's' : ''}</p>
+                        <p className="font-semibold text-white">{formatarMoeda(cliente.valor)}</p>
+                        <p className="text-xs text-[#8b92a5]">{cliente.compras} compra{cliente.compras !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
                   ))}
@@ -393,33 +393,33 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
         </TabsContent>
 
         <TabsContent value="pagamentos">
-          <Card>
+          <Card className="surface-card border-none">
             <CardHeader>
-              <CardTitle>Formas de Pagamento Utilizadas</CardTitle>
+              <CardTitle className="text-white">Formas de Pagamento Utilizadas</CardTitle>
             </CardHeader>
             <CardContent>
               {dados.formasPagamento.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhuma venda no período</p>
+                <p className="text-[#8b92a5] text-center py-4">Nenhuma venda no período</p>
               ) : (
                 <div className="space-y-4">
                   {dados.formasPagamento.map((forma) => {
                     const percentual = (forma.valor / dados.totalVendas) * 100;
                     return (
                       <div key={forma.forma} className="space-y-2">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center text-white">
                           <span className="font-medium capitalize">{forma.forma}</span>
                           <div className="text-right">
                             <span className="font-semibold">{formatarMoeda(forma.valor)}</span>
-                            <span className="text-sm text-gray-500 ml-2">({percentual.toFixed(1)}%)</span>
+                            <span className="text-sm text-[#8b92a5] ml-2">({percentual.toFixed(1)}%)</span>
                           </div>
                         </div>
-                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-3 bg-[#ffffff10] rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-blue-500 rounded-full transition-all"
+                            className="h-full bg-[#3b82f6] rounded-full transition-all"
                             style={{ width: `${percentual}%` }}
                           />
                         </div>
-                        <p className="text-xs text-gray-500">{forma.quantidade} transações</p>
+                        <p className="text-xs text-[#8b92a5]">{forma.quantidade} transações</p>
                       </div>
                     );
                   })}
