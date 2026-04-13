@@ -45,7 +45,7 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const dados = {
       nome: formData.nome,
       descricao: formData.descricao,
@@ -118,7 +118,7 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
           <div className="flex flex-col gap-3 sm:gap-4">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 w-full">
               <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 shrink-0" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground shrink-0" />
                 <Input
                   placeholder="Buscar produtos..."
                   value={busca}
@@ -138,7 +138,10 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleNovo} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto min-h-[44px]">
+            <Button
+              onClick={handleNovo}
+              className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold w-full sm:w-auto min-h-[44px]"
+            >
               <Plus className="h-4 w-4 mr-2 shrink-0" />
               Novo Produto
             </Button>
@@ -178,8 +181,8 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                     </div>
                     <div>
                       <Label htmlFor="categoria">Categoria *</Label>
-                      <Select 
-                        value={formData.categoria} 
+                      <Select
+                        value={formData.categoria}
                         onValueChange={(v) => setFormData({ ...formData, categoria: v as CategoriaProduto })}
                       >
                         <SelectTrigger>
@@ -256,10 +259,15 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                       />
                     </div>
                   </div>
-                  
+
                   {formData.precoCusto && formData.precoVenda && (
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm text-green-800">
+                    <div className="p-3 rounded-lg border"
+                      style={{
+                        background: 'hsl(152,100%,41%,0.08)',
+                        borderColor: 'hsl(152,100%,41%,0.25)',
+                      }}
+                    >
+                      <p className="text-sm" style={{ color: 'hsl(152,100%,41%)' }}>
                         <strong>Lucro estimado:</strong> {' '}
                         {formatarMoeda(lucroPotencial(parseFloat(formData.precoCusto), parseFloat(formData.precoVenda)).lucro)}
                         {' '} ({lucroPotencial(parseFloat(formData.precoCusto), parseFloat(formData.precoVenda)).margem.toFixed(1)}% margem)
@@ -271,7 +279,10 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                     <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    <Button
+                      type="submit"
+                      className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold"
+                    >
                       {produtoEditando ? 'Salvar Alterações' : 'Cadastrar Produto'}
                     </Button>
                   </div>
@@ -283,16 +294,16 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-blue-600" />
+            <Package className="h-5 w-5 text-[hsl(38,95%,54%)]" />
             Meus Produtos ({produtosFiltrados.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {produtosFiltrados.length === 0 ? (
             <div className="text-center py-12">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhum produto encontrado</p>
-              <p className="text-sm text-gray-400 mt-1">Cadastre seu primeiro produto para começar</p>
+              <Package className="h-12 w-12 text-muted-foreground opacity-30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhum produto encontrado</p>
+              <p className="text-sm text-muted-foreground opacity-70 mt-1">Cadastre seu primeiro produto para começar</p>
             </div>
           ) : (
             <div className="overflow-x-auto scroll-touch -mx-4 sm:mx-0">
@@ -313,14 +324,14 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                   {produtosFiltrados.map((produto) => {
                     const { lucro, margem } = lucroPotencial(produto.precoCusto, produto.precoVenda);
                     const categoria = categorias[produto.categoria];
-                    
+
                     return (
-                      <TableRow key={produto.id} className="hover:bg-gray-50">
+                      <TableRow key={produto.id} className="hover:bg-[hsl(220,15%,12%)]">
                         <TableCell className="px-2 sm:px-4 min-w-0">
                           <div className="max-w-[120px] sm:max-w-[200px]">
-                            <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{produto.nome}</p>
+                            <p className="font-medium text-xs sm:text-sm truncate">{produto.nome}</p>
                             {produto.descricao && (
-                              <p className="text-xs text-gray-500 truncate">{produto.descricao}</p>
+                              <p className="text-xs text-muted-foreground truncate">{produto.descricao}</p>
                             )}
                           </div>
                         </TableCell>
@@ -329,26 +340,29 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                             {categoria.icone} {categoria.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right text-gray-600 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+                        <TableCell className="text-right text-muted-foreground text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
                           {formatarMoeda(produto.precoCusto)}
                         </TableCell>
                         <TableCell className="text-right font-medium text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
                           {formatarMoeda(produto.precoVenda)}
                         </TableCell>
                         <TableCell className="text-right hidden md:table-cell px-2 sm:px-4">
-                          <span className="text-green-600 font-medium text-sm">
+                          <span className="font-medium text-sm" style={{ color: 'hsl(152,100%,41%)' }}>
                             {formatarMoeda(lucro)}
                           </span>
-                          <span className="text-xs text-gray-500 block">
+                          <span className="text-xs text-muted-foreground block">
                             {margem.toFixed(1)}%
                           </span>
                         </TableCell>
                         <TableCell className="text-center px-2 sm:px-4">
-                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 rounded-full text-xs sm:text-sm font-medium">
+                          <span
+                            className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-medium"
+                            style={{ background: 'hsl(220,14%,14%)' }}
+                          >
                             {produto.quantidade}
                           </span>
                         </TableCell>
-                        <TableCell className="text-xs sm:text-sm text-gray-500 hidden md:table-cell px-2 sm:px-4 whitespace-nowrap">
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground hidden md:table-cell px-2 sm:px-4 whitespace-nowrap">
                           {formatarData(produto.dataCompra)}
                         </TableCell>
                         <TableCell className="text-right px-2 sm:px-4">
@@ -357,7 +371,7 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditar(produto)}
-                              className="text-blue-600 hover:text-blue-700"
+                              className="text-[hsl(38,95%,54%)] hover:text-[hsl(38,95%,48%)] hover:bg-[hsl(38,95%,54%,0.1)]"
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -369,7 +383,7 @@ export function Produtos({ produtos, onAdicionar, onAtualizar, onRemover }: Prod
                                   onRemover(produto.id);
                                 }
                               }}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-[hsl(352,100%,62%)] hover:text-[hsl(352,100%,55%)] hover:bg-[hsl(352,100%,62%,0.1)]"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

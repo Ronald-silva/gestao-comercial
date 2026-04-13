@@ -44,7 +44,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       // Planilha de Vendas
       const vendasData = vendas.flatMap(v => {
         if (!v.itens || v.itens.length === 0) return [];
-        
+
         return v.itens.map(item => {
           const produto = produtos.find(p => p.id === item.produtoId);
           const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
@@ -106,20 +106,20 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
 
       // Criar workbook
       const wb = XLSX.utils.book_new();
-      
+
       const wsResumo = XLSX.utils.json_to_sheet(resumoData);
       XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
-      
+
       const wsProdutos = XLSX.utils.json_to_sheet(produtosData);
       XLSX.utils.book_append_sheet(wb, wsProdutos, 'Produtos');
-      
+
       const wsVendas = XLSX.utils.json_to_sheet(vendasData);
       XLSX.utils.book_append_sheet(wb, wsVendas, 'Vendas');
 
       // Download
       const data = new Date().toISOString().split('T')[0];
       XLSX.writeFile(wb, `Gestao_Vendas_${data}.xlsx`);
-      
+
       toast.success('Dados exportados para Excel com sucesso!');
     } catch (error) {
       toast.error('Erro ao exportar dados');
@@ -131,7 +131,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
     try {
       // CSV de Vendas (mais usado)
       const headers = ['Data', 'Cliente', 'Produto', 'Quantidade', 'Valor Total', 'Forma Pagamento', 'Status', 'Lucro'];
-      
+
       const rows = vendas.flatMap(v => {
         if (!v.itens) return [];
         return v.itens.map(item => {
@@ -160,7 +160,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       link.href = URL.createObjectURL(blob);
       link.download = `vendas_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
-      
+
       toast.success('Dados exportados para CSV com sucesso!');
     } catch (error) {
       toast.error('Erro ao exportar CSV');
@@ -170,18 +170,38 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
 
   return (
     <div className="flex gap-1 sm:gap-2 items-center">
-      <Button variant="outline" size="sm" onClick={exportarExcel} className="text-green-700 border-green-300 hover:bg-green-50 min-h-[44px] px-2 sm:px-3" title="Exportar Excel">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={exportarExcel}
+        className="border min-h-[44px] px-2 sm:px-3 hover:bg-[hsl(152,100%,41%,0.1)]"
+        style={{ color: 'hsl(152,100%,41%)', borderColor: 'hsl(152,100%,41%,0.3)' }}
+        title="Exportar Excel"
+      >
         <FileSpreadsheet className="h-4 w-4 sm:mr-2 shrink-0" />
         <span className="hidden sm:inline">Excel</span>
       </Button>
-      <Button variant="outline" size="sm" onClick={exportarCSV} className="text-blue-700 border-blue-300 hover:bg-blue-50 min-h-[44px] px-2 sm:px-3" title="Exportar CSV">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={exportarCSV}
+        className="border min-h-[44px] px-2 sm:px-3 hover:bg-[hsl(217,91%,60%,0.1)]"
+        style={{ color: 'hsl(217,91%,60%)', borderColor: 'hsl(217,91%,60%,0.3)' }}
+        title="Exportar CSV"
+      >
         <FileText className="h-4 w-4 sm:mr-2 shrink-0" />
         <span className="hidden sm:inline">CSV</span>
       </Button>
-      
+
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 min-h-[44px] px-2 sm:px-3" title="Limpar Dados">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border min-h-[44px] px-2 sm:px-3 hover:bg-[hsl(352,100%,62%,0.1)]"
+            style={{ color: 'hsl(352,100%,62%)', borderColor: 'hsl(352,100%,62%,0.3)' }}
+            title="Limpar Dados"
+          >
             <Trash2 className="h-4 w-4 sm:mr-2 shrink-0" />
             <span className="hidden sm:inline">Resetar</span>
           </Button>
@@ -196,7 +216,10 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={limparDados} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={limparDados}
+              className="bg-[hsl(352,100%,62%)] hover:bg-[hsl(352,100%,55%)] text-white border-0"
+            >
               Sim, apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>

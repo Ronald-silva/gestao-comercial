@@ -109,28 +109,28 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
     <div className="space-y-6">
       {/* Cards Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="border-l-4 border-l-[hsl(152,100%,41%)]">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase font-medium">Total Investido em Estoque</p>
-            <p className="text-2xl font-bold text-cyan-700 mt-1">{formatarMoeda(getTotalInvestidoEstoque())}</p>
-            <p className="text-xs text-gray-400 mt-1">Todas as compras</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium">Total Investido em Estoque</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: 'hsl(152,100%,41%)' }}>{formatarMoeda(getTotalInvestidoEstoque())}</p>
+            <p className="text-xs text-muted-foreground mt-1">Todas as compras</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-[hsl(38,95%,54%)]">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase font-medium">Compras Este Mês</p>
-            <p className="text-2xl font-bold text-blue-700 mt-1">{formatarMoeda(comprasMes)}</p>
-            <p className="text-xs text-gray-400 mt-1">{compras.filter(c => {
+            <p className="text-xs text-muted-foreground uppercase font-medium">Compras Este Mês</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: 'hsl(38,95%,54%)' }}>{formatarMoeda(comprasMes)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{compras.filter(c => {
               const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
               return new Date(c.data) >= ini;
             }).length} compras</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card className="border-l-4 border-l-[hsl(217,91%,60%)]">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase font-medium">Fornecedores</p>
-            <p className="text-2xl font-bold text-indigo-700 mt-1">{fornecedoresUnicos}</p>
-            <p className="text-xs text-gray-400 mt-1">Cadastrados</p>
+            <p className="text-xs text-muted-foreground uppercase font-medium">Fornecedores</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: 'hsl(217,91%,60%)' }}>{fornecedoresUnicos}</p>
+            <p className="text-xs text-muted-foreground mt-1">Cadastrados</p>
           </CardContent>
         </Card>
       </div>
@@ -139,10 +139,13 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-cyan-600" />
+            <ShoppingBag className="w-5 h-5 text-[hsl(38,95%,54%)]" />
             Histórico de Compras
           </CardTitle>
-          <Button onClick={() => setModalNovo(true)} className="bg-cyan-600 hover:bg-cyan-700">
+          <Button
+            onClick={() => setModalNovo(true)}
+            className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold"
+          >
             <Plus className="w-4 h-4 mr-2" /> Nova Compra
           </Button>
         </CardHeader>
@@ -162,7 +165,7 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
               <TableBody>
                 {compras.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                       <PackageSearch className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       Nenhuma compra registrada ainda.
                     </TableCell>
@@ -172,35 +175,41 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
                     <>
                       <TableRow
                         key={compra.id}
-                        className="cursor-pointer hover:bg-gray-50"
+                        className="cursor-pointer hover:bg-[hsl(220,15%,12%)]"
                         onClick={() => setExpandida(expandida === compra.id ? null : compra.id)}
                       >
                         <TableCell className="whitespace-nowrap">{formatarData(compra.data)}</TableCell>
                         <TableCell className="font-medium">{compra.fornecedor}</TableCell>
                         <TableCell>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-muted-foreground">
                             {compra.itens.length === 1
                               ? compra.itens[0].produtoNome
                               : `${compra.itens.length} itens`}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`text-xs ${compra.formaPagamento === 'pix' ? 'bg-green-100 text-green-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          <Badge
+                            className="text-xs border-0"
+                            style={{
+                              background: 'hsl(152,100%,41%,0.12)',
+                              color: 'hsl(152,100%,41%)',
+                            }}
+                          >
                             {formasPagamento[compra.formaPagamento]?.label || compra.formaPagamento}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-cyan-700">
+                        <TableCell className="text-right font-semibold" style={{ color: 'hsl(152,100%,41%)' }}>
                           {formatarMoeda(compra.valorTotal)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {expandida === compra.id
-                              ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                              : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                              ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                              : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                              className="text-[hsl(352,100%,62%)] hover:text-[hsl(352,100%,55%)] hover:bg-[hsl(352,100%,62%,0.1)] h-8 w-8 p-0"
                               onClick={e => { e.stopPropagation(); onRemover(compra.id); }}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -210,18 +219,18 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
                       </TableRow>
 
                       {expandida === compra.id && (
-                        <TableRow key={`${compra.id}-detalhes`} className="bg-gray-50">
+                        <TableRow key={`${compra.id}-detalhes`} style={{ background: 'hsl(220,16%,10%)' }}>
                           <TableCell colSpan={6} className="py-3 px-4">
                             <div className="space-y-1">
-                              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Itens desta compra:</p>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Itens desta compra:</p>
                               {compra.itens.map((item, i) => (
-                                <div key={i} className="flex justify-between text-sm py-1 border-b last:border-0">
+                                <div key={i} className="flex justify-between text-sm py-1 border-b last:border-0 border-border">
                                   <span>{item.produtoNome} × {item.quantidade}</span>
                                   <span className="font-medium">{formatarMoeda(item.quantidade * item.precoUnitario)}</span>
                                 </div>
                               ))}
                               {compra.observacoes && (
-                                <p className="text-xs text-gray-500 pt-1 italic">Obs: {compra.observacoes}</p>
+                                <p className="text-xs text-muted-foreground pt-1 italic">Obs: {compra.observacoes}</p>
                               )}
                             </div>
                           </TableCell>
@@ -281,8 +290,11 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
             </div>
 
             {/* Adicionar itens */}
-            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-              <p className="text-sm font-semibold text-gray-700">Adicionar Itens</p>
+            <div
+              className="rounded-lg p-3 space-y-3 border"
+              style={{ background: 'hsl(220,16%,10%)', borderColor: 'hsl(220,15%,14%)' }}
+            >
+              <p className="text-sm font-semibold">Adicionar Itens</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="sm:col-span-2">
                   <Label className="text-xs">Produto</Label>
@@ -330,17 +342,21 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
               {itens.length > 0 && (
                 <div className="space-y-1 mt-2">
                   {itens.map((item, i) => (
-                    <div key={i} className="flex justify-between items-center bg-white rounded p-2 text-sm border">
+                    <div
+                      key={i}
+                      className="flex justify-between items-center rounded p-2 text-sm border"
+                      style={{ background: 'hsl(220,18%,7%)', borderColor: 'hsl(220,15%,14%)' }}
+                    >
                       <span>{item.produtoNome} × {item.quantidade}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{formatarMoeda(item.quantidade * item.precoUnitario)}</span>
-                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500" onClick={() => removerItem(i)}>
+                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-[hsl(352,100%,62%)]" onClick={() => removerItem(i)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center pt-1 font-bold text-cyan-700">
+                  <div className="flex justify-between items-center pt-1 font-bold" style={{ color: 'hsl(152,100%,41%)' }}>
                     <span>Total da Compra:</span>
                     <span>{formatarMoeda(totalCarrinho)}</span>
                   </div>
@@ -361,7 +377,7 @@ export function Compras({ compras, produtos, onAdicionar, onRemover, getTotalInv
               <Button type="button" variant="outline" onClick={resetModal}>Cancelar</Button>
               <Button
                 type="submit"
-                className="bg-cyan-600 hover:bg-cyan-700"
+                className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold"
                 disabled={itens.length === 0 || !form.fornecedor}
               >
                 <TrendingDown className="w-4 h-4 mr-2" /> Registrar Compra

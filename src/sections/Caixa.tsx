@@ -94,50 +94,50 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
     <div className="space-y-6">
       {/* Cards de Saldo */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className={`border-l-4 ${saldos.saldoPix < 0 ? 'border-l-red-500' : 'border-l-green-500'}`}>
+        <Card className={`border-l-4 ${saldos.saldoPix < 0 ? 'border-l-[hsl(352,100%,62%)]' : 'border-l-[hsl(152,100%,41%)]'}`}>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+              <p className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
                 <Zap className="w-3 h-3" /> Saldo PIX
               </p>
-              {saldos.saldoPix < 0 && <AlertTriangle className="w-4 h-4 text-red-500" />}
+              {saldos.saldoPix < 0 && <AlertTriangle className="w-4 h-4" style={{ color: 'hsl(352,100%,62%)' }} />}
             </div>
-            <p className={`text-2xl font-bold ${saldos.saldoPix < 0 ? 'text-red-600' : 'text-green-700'}`}>
+            <p className="text-2xl font-bold" style={{ color: saldos.saldoPix < 0 ? 'hsl(352,100%,62%)' : 'hsl(152,100%,41%)' }}>
               {formatarMoeda(saldos.saldoPix)}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Conta bancária / app</p>
+            <p className="text-xs text-muted-foreground mt-1">Conta bancária / app</p>
           </CardContent>
         </Card>
 
-        <Card className={`border-l-4 ${saldos.saldoDinheiro < 0 ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
+        <Card className={`border-l-4 ${saldos.saldoDinheiro < 0 ? 'border-l-[hsl(352,100%,62%)]' : 'border-l-[hsl(152,100%,41%)]'}`}>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+              <p className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
                 <Banknote className="w-3 h-3" /> Caixa Dinheiro
               </p>
-              {saldos.saldoDinheiro < 0 && <AlertTriangle className="w-4 h-4 text-red-500" />}
+              {saldos.saldoDinheiro < 0 && <AlertTriangle className="w-4 h-4" style={{ color: 'hsl(352,100%,62%)' }} />}
             </div>
-            <p className={`text-2xl font-bold ${saldos.saldoDinheiro < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+            <p className="text-2xl font-bold" style={{ color: saldos.saldoDinheiro < 0 ? 'hsl(352,100%,62%)' : 'hsl(152,100%,41%)' }}>
               {formatarMoeda(saldos.saldoDinheiro)}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Dinheiro físico em mãos</p>
+            <p className="text-xs text-muted-foreground mt-1">Dinheiro físico em mãos</p>
           </CardContent>
         </Card>
 
-        <Card className={`border-l-4 ${saldos.saldoTotal < 0 ? 'border-l-red-500' : 'border-l-teal-500'}`}>
+        <Card className={`border-l-4 ${saldos.saldoTotal < 0 ? 'border-l-[hsl(352,100%,62%)]' : 'border-l-[hsl(38,95%,54%)]'}`}>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+              <p className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
                 <Wallet className="w-3 h-3" /> Total Geral
               </p>
-              {saldos.saldoTotal < 0 && <AlertTriangle className="w-4 h-4 text-red-500" />}
+              {saldos.saldoTotal < 0 && <AlertTriangle className="w-4 h-4" style={{ color: 'hsl(352,100%,62%)' }} />}
             </div>
-            <p className={`text-2xl font-bold ${saldos.saldoTotal < 0 ? 'text-red-600' : 'text-teal-700'}`}>
+            <p className="text-2xl font-bold" style={{ color: saldos.saldoTotal < 0 ? 'hsl(352,100%,62%)' : 'hsl(38,95%,54%)' }}>
               {formatarMoeda(saldos.saldoTotal)}
             </p>
-            <div className="flex gap-3 text-xs text-gray-400 mt-1">
-              <span className="text-green-600">↑ {formatarMoeda(totalEntradas)}</span>
-              <span className="text-red-500">↓ {formatarMoeda(totalSaidas)}</span>
+            <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+              <span style={{ color: 'hsl(152,100%,41%)' }}>↑ {formatarMoeda(totalEntradas)}</span>
+              <span style={{ color: 'hsl(352,100%,62%)' }}>↓ {formatarMoeda(totalSaidas)}</span>
             </div>
           </CardContent>
         </Card>
@@ -147,7 +147,7 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
       <Card>
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-teal-600" />
+            <Wallet className="w-5 h-5 text-[hsl(38,95%,54%)]" />
             Movimentações de Caixa
           </CardTitle>
           <div className="flex gap-2 flex-wrap">
@@ -167,7 +167,10 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
                 <SelectItem value="saida">Saídas</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={() => setModalNovo(true)} className="bg-teal-600 hover:bg-teal-700">
+            <Button
+              onClick={() => setModalNovo(true)}
+              className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold"
+            >
               <Plus className="w-4 h-4 mr-2" /> Nova Movimentação
             </Button>
           </div>
@@ -188,7 +191,7 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
               <TableBody>
                 {movimentacoesFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                       <Wallet className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       Nenhuma movimentação encontrada.
                     </TableCell>
@@ -200,24 +203,24 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
                       <TableRow key={mov.id}>
                         <TableCell className="whitespace-nowrap text-sm">{formatarData(mov.data)}</TableCell>
                         <TableCell>
-                          <Badge className={`text-xs ${info?.bgCor || 'bg-gray-100'} ${info?.cor || 'text-gray-700'} border-0`}>
+                          <Badge className={`text-xs ${info?.bgCor || 'bg-secondary'} ${info?.cor || 'text-foreground'} border-0`}>
                             {info?.label || mov.tipo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-700">{mov.descricao}</TableCell>
+                        <TableCell className="text-sm">{mov.descricao}</TableCell>
                         <TableCell className="text-center">
                           {mov.canal === 'pix'
-                            ? <span className="text-xs font-medium text-green-600 flex items-center justify-center gap-1"><Zap className="w-3 h-3" />PIX</span>
-                            : <span className="text-xs font-medium text-emerald-600 flex items-center justify-center gap-1"><Banknote className="w-3 h-3" />Dinheiro</span>
+                            ? <span className="text-xs font-medium flex items-center justify-center gap-1" style={{ color: 'hsl(152,100%,41%)' }}><Zap className="w-3 h-3" />PIX</span>
+                            : <span className="text-xs font-medium flex items-center justify-center gap-1" style={{ color: 'hsl(152,100%,41%)' }}><Banknote className="w-3 h-3" />Dinheiro</span>
                           }
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {mov.direcao === 'entrada' ? (
-                            <span className="text-green-600 flex items-center justify-end gap-1">
+                            <span className="flex items-center justify-end gap-1" style={{ color: 'hsl(152,100%,41%)' }}>
                               <ArrowUpCircle className="w-4 h-4" /> {formatarMoeda(mov.valor)}
                             </span>
                           ) : (
-                            <span className="text-red-600 flex items-center justify-end gap-1">
+                            <span className="flex items-center justify-end gap-1" style={{ color: 'hsl(352,100%,62%)' }}>
                               <ArrowDownCircle className="w-4 h-4" /> {formatarMoeda(mov.valor)}
                             </span>
                           )}
@@ -226,7 +229,7 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                            className="text-[hsl(352,100%,62%)] hover:text-[hsl(352,100%,55%)] hover:bg-[hsl(352,100%,62%,0.1)] h-8 w-8 p-0"
                             onClick={() => onRemover(mov.id)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -258,18 +261,18 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
               <Select value={form.tipo} onValueChange={v => handleTipoChange(v as TipoMovimentacaoCaixa)}>
                 <SelectTrigger><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
                 <SelectContent>
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Entradas</div>
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">Entradas</div>
                   {TIPOS_LISTA.filter(t => t.direcao === 'entrada').map(t => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase mt-1">Saídas</div>
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase mt-1">Saídas</div>
                   {TIPOS_LISTA.filter(t => t.direcao === 'saida').map(t => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {form.tipo && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Canal: <strong>{tiposMovimentacao[form.tipo].canal === 'pix' ? 'PIX' : 'Dinheiro físico'}</strong>
                 </p>
               )}
@@ -289,7 +292,7 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
               <div>
                 <Label>Valor (R$) *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-gray-500 text-sm">R$</span>
+                  <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">R$</span>
                   <Input
                     type="number"
                     step="0.01"
@@ -342,7 +345,7 @@ export function Caixa({ movimentacoes, vendas, onAdicionar, onRemover, getSaldoC
               <Button type="button" variant="outline" onClick={resetModal}>Cancelar</Button>
               <Button
                 type="submit"
-                className="bg-teal-600 hover:bg-teal-700"
+                className="bg-[hsl(38,95%,54%)] hover:bg-[hsl(38,95%,48%)] text-[hsl(220,20%,4%)] font-semibold"
                 disabled={!form.tipo || !form.valor}
               >
                 <Plus className="w-4 h-4 mr-2" /> Registrar

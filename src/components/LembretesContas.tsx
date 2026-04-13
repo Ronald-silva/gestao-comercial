@@ -33,8 +33,8 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
       .map(v => {
         const parcelasPendentes = v.pagamento.parcelas?.filter(p => !p.pago) || [];
         const parcelaMaisProxima = parcelasPendentes[0];
-        
-        const diasAtraso = parcelaMaisProxima 
+
+        const diasAtraso = parcelaMaisProxima
           ? Math.floor((new Date(hoje).getTime() - new Date(parcelaMaisProxima.dataVencimento).getTime()) / (1000 * 60 * 60 * 24))
           : 0;
 
@@ -69,9 +69,9 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
       `Passando para lembrar sobre o pagamento pendente:\n` +
       `📦 Produto: ${conta.produtoNome}\n` +
       `💰 Valor: ${formatarMoeda(conta.valorPendente)}\n` +
-      (conta.diasAtraso > 0 
+      (conta.diasAtraso > 0
         ? `⚠️ Vencido há ${conta.diasAtraso} dia(s)\n`
-        : conta.diasAtraso === 0 
+        : conta.diasAtraso === 0
         ? `📅 Vence hoje\n`
         : `📅 Vence em ${Math.abs(conta.diasAtraso)} dia(s)\n`
       ) +
@@ -85,11 +85,11 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
 
   if (contas.length === 0) {
     return (
-      <Card className="bg-green-50 border-green-200">
+      <Card style={{ background: 'hsl(152,100%,41%,0.07)', borderColor: 'hsl(152,100%,41%,0.25)' }}>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-3 text-green-700">
+          <div className="flex items-center gap-3" style={{ color: 'hsl(152,100%,41%)' }}>
             <CheckCircle className="h-5 w-5" />
-            <p className="font-medium">Todas as contas estão em dia! 🎉</p>
+            <p className="font-medium">Todas as contas estão em dia!</p>
           </div>
         </CardContent>
       </Card>
@@ -101,103 +101,117 @@ export function LembretesContas({ vendas, onRegistrarPagamento }: LembretesConta
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-orange-600" />
+            <Bell className="h-5 w-5 text-[hsl(38,95%,54%)]" />
             Contas a Receber
             {contasUrgentes.length > 0 && (
-              <Badge className="bg-red-500 text-white">{contasUrgentes.length} atrasadas</Badge>
+              <Badge className="text-white text-xs border-0" style={{ background: 'hsl(352,100%,62%)' }}>
+                {contasUrgentes.length} atrasadas
+              </Badge>
             )}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             Total: {formatarMoeda(contas.reduce((sum, c) => sum + c.valorPendente, 0))}
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {contasExibidas.map((conta) => (
-            <div 
-              key={conta.vendaId} 
-              className={`p-4 rounded-lg border ${
-                conta.diasAtraso > 0 
-                  ? 'bg-red-50 border-red-200' 
-                  : conta.diasAtraso === 0 
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-blue-50 border-blue-200'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-gray-900">{conta.clienteNome}</span>
-                    {conta.diasAtraso > 0 && (
-                      <Badge className="bg-red-500 text-white text-xs">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        {conta.diasAtraso} dia{conta.diasAtraso !== 1 ? 's' : ''} atrasado
-                      </Badge>
-                    )}
-                    {conta.diasAtraso === 0 && (
-                      <Badge className="bg-yellow-500 text-white text-xs">
-                        Vence hoje
-                      </Badge>
-                    )}
-                    {conta.diasAtraso < 0 && (
-                      <Badge className="bg-blue-500 text-white text-xs">
-                        Em {Math.abs(conta.diasAtraso)} dia{Math.abs(conta.diasAtraso) !== 1 ? 's' : ''}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600">{conta.produtoNome}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm">
-                    <span className="font-semibold text-gray-900">
-                      {formatarMoeda(conta.valorPendente)}
-                    </span>
-                    {conta.dataVencimento && (
-                      <span className="text-gray-500">
-                        Venc: {formatarData(conta.dataVencimento)}
+          {contasExibidas.map((conta) => {
+            const isAtrasado = conta.diasAtraso > 0;
+            const isHoje = conta.diasAtraso === 0;
+
+            const bgColor = isAtrasado
+              ? 'hsl(352,100%,62%,0.08)'
+              : isHoje
+              ? 'hsl(38,95%,54%,0.08)'
+              : 'hsl(217,91%,60%,0.08)';
+            const borderColor = isAtrasado
+              ? 'hsl(352,100%,62%,0.25)'
+              : isHoje
+              ? 'hsl(38,95%,54%,0.25)'
+              : 'hsl(217,91%,60%,0.25)';
+
+            return (
+              <div
+                key={conta.vendaId}
+                className="p-4 rounded-lg border"
+                style={{ background: bgColor, borderColor }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{conta.clienteNome}</span>
+                      {isAtrasado && (
+                        <Badge className="text-white text-xs border-0" style={{ background: 'hsl(352,100%,62%)' }}>
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          {conta.diasAtraso} dia{conta.diasAtraso !== 1 ? 's' : ''} atrasado
+                        </Badge>
+                      )}
+                      {isHoje && (
+                        <Badge className="text-[hsl(220,20%,4%)] text-xs border-0" style={{ background: 'hsl(38,95%,54%)' }}>
+                          Vence hoje
+                        </Badge>
+                      )}
+                      {conta.diasAtraso < 0 && (
+                        <Badge className="text-white text-xs border-0" style={{ background: 'hsl(217,91%,60%)' }}>
+                          Em {Math.abs(conta.diasAtraso)} dia{Math.abs(conta.diasAtraso) !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{conta.produtoNome}</p>
+                    <div className="flex items-center gap-4 mt-2 text-sm">
+                      <span className="font-semibold">
+                        {formatarMoeda(conta.valorPendente)}
                       </span>
-                    )}
+                      {conta.dataVencimento && (
+                        <span className="text-muted-foreground">
+                          Venc: {formatarData(conta.dataVencimento)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {conta.clienteContato && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleWhatsApp(conta)}
-                      className="text-green-600 border-green-300 hover:bg-green-50"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {conta.clienteContato && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleWhatsApp(conta)}
+                        className="border hover:bg-[hsl(152,100%,41%,0.1)]"
+                        style={{ color: 'hsl(152,100%,41%)', borderColor: 'hsl(152,100%,41%,0.3)' }}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Ação rápida: Baixar valor pendente total com data de hoje
                         if (confirm(`Confirmar baixa total de ${formatarMoeda(conta.valorPendente)}?`)) {
                           onRegistrarPagamento(
-                            conta.vendaId, 
-                            conta.valorPendente, 
-                            new Date().toISOString().split('T')[0], 
+                            conta.vendaId,
+                            conta.valorPendente,
+                            new Date().toISOString().split('T')[0],
                             'Baixa via Lembrete'
                           );
                         }
                       }}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      className="border hover:bg-[hsl(217,91%,60%,0.1)]"
+                      style={{ color: 'hsl(217,91%,60%)', borderColor: 'hsl(217,91%,60%,0.3)' }}
                       title="Baixar valor total"
                     >
                       <CheckCircle className="h-4 w-4" />
                     </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {contas.length > 5 && (
           <Button
             variant="ghost"
-            className="w-full mt-3 text-gray-500"
+            className="w-full mt-3 text-muted-foreground hover:text-foreground"
             onClick={() => setMostrarTodos(!mostrarTodos)}
           >
             {mostrarTodos ? 'Mostrar menos' : `Ver mais ${contas.length - 5} contas`}
