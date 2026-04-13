@@ -51,6 +51,8 @@ export interface ItemVenda {
   produtoNome: string;
   quantidade: number;
   precoUnitario: number;
+  /** Custo unitário na data da venda (histórico). Se ausente, usa o cadastro atual do produto. */
+  precoCusto?: number;
 }
 
 export interface Venda {

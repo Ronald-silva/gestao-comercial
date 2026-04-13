@@ -5,8 +5,9 @@ import type {
   CreditoCliente, Pagamento,
   MovimentacaoCaixa, TipoMovimentacaoCaixa,
   Compra, MetaReinvestimento, ScoreCliente, AlertaInteligente,
-  ContaPagar, StatusContaPagar, Recomendacao,
+  ContaPagar, StatusContaPagar, Recomendacao, FormaPagamento,
 } from '@/types';
+import { cogsDoItem, custoUnitarioDoItem } from '@/lib/utils';
 
 // Função para gerar ID único
 const gerarIdUnico = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -198,10 +199,7 @@ export function useDados() {
    * Helper interno: custo total (COGS) de uma venda — produto saiu do estoque inteiro ao vender
    */
   const fullCOGS = (v: Venda): number =>
-    v.itens.reduce((s, item) => {
-      const prod = produtos.find(p => p.id === item.produtoId);
-      return s + (prod ? prod.precoCusto * item.quantidade : 0);
-    }, 0);
+    v.itens.reduce((s, item) => s + cogsDoItem(item, produtos), 0);
 
   /**
    * Capital Disponível = dinheiro já recebido - custo CHEIO dos produtos que geraram esse recebimento
@@ -420,12 +418,10 @@ export function useDados() {
   const getLucroTotal = () => {
     const vendasConcluidas = vendas.filter(v => v.status !== 'cancelada');
     const totalVendido = vendasConcluidas.reduce((s, v) => s + v.valorTotal, 0);
-    const totalCusto = vendasConcluidas.reduce((s, v) => {
-      return s + v.itens.reduce((si, item) => {
-        const prod = produtos.find(p => p.id === item.produtoId);
-        return si + (prod ? prod.precoCusto * item.quantidade : 0);
-      }, 0);
-    }, 0);
+    const totalCusto = vendasConcluidas.reduce(
+      (s, v) => s + v.itens.reduce((si, item) => si + cogsDoItem(item, produtos), 0),
+      0
+    );
     const lucro = totalVendido - totalCusto;
     const margem = totalVendido > 0 ? (lucro / totalVendido) * 100 : 0;
     return { lucro, margem, totalCusto, totalVendido };
@@ -662,8 +658,8 @@ export function useDados() {
         : null;
 
       v.itens.forEach(item => {
-        const prod = produtos.find(p => p.id === item.produtoId);
-        const lucro = prod ? (item.precoUnitario - prod.precoCusto) * item.quantidade : 0;
+        const cu = custoUnitarioDoItem(item, produtos);
+        const lucro = (item.precoUnitario - cu) * item.quantidade;
         if (!mapa[item.produtoId]) {
           mapa[item.produtoId] = { nome: item.produtoNome, lucroTotal: 0, qtdVendida: 0, totalVendas: 0, diasTotal: 0, qtdPagas: 0 };
         }
@@ -703,8 +699,31 @@ export function useDados() {
   // VENDAS
   // ================================================================
 
+  const pushEntradaCaixaVenda = (vendaId: string, valor: number, forma: FormaPagamento, data: string) => {
+    if (valor <= 0) return;
+    const canal: 'pix' | 'dinheiro' = forma === 'dinheiro' ? 'dinheiro' : 'pix';
+    const tipo: TipoMovimentacaoCaixa = canal === 'pix' ? 'entrada_venda_pix' : 'entrada_venda_dinheiro';
+    setMovimentacoes(prev => [{
+      id: gerarId(),
+      tipo,
+      canal,
+      direcao: 'entrada',
+      descricao: 'Recebimento de venda',
+      valor,
+      data,
+      vendaId,
+      criadoEm: new Date().toISOString(),
+    }, ...prev]);
+  };
+
   const adicionarVenda = (venda: Omit<Venda, 'id' | 'criadoEm' | 'pagamento'>) => {
     const id = gerarId();
+
+    const itensComCusto = venda.itens.map(item => {
+      const prod = produtos.find(p => p.id === item.produtoId);
+      return { ...item, precoCusto: prod?.precoCusto ?? item.precoCusto };
+    });
+
     const valorParcela = venda.numeroParcelas > 1
       ? venda.valorTotal / venda.numeroParcelas
       : venda.valorTotal;
@@ -728,20 +747,28 @@ export function useDados() {
       lancamentos: (venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix') ? [{
         id: gerarId(),
         valor: venda.valorTotal,
-        data: new Date().toISOString().split('T')[0],
+        data: venda.dataVenda,
         observacao: 'Pagamento à vista'
       }] : [],
       status: (venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix' ? 'pago' : 'pendente') as StatusPagamento,
     };
 
+    const vistaPaga = venda.formaPagamento === 'dinheiro' || venda.formaPagamento === 'pix';
+
     const novaVenda: Venda = {
       ...venda,
+      itens: itensComCusto,
       id,
       pagamento,
+      status: vistaPaga ? 'concluida' : venda.status,
       criadoEm: new Date().toISOString(),
     };
 
     setVendas(prev => [novaVenda, ...prev]);
+
+    if (vistaPaga && venda.valorTotal > 0) {
+      pushEntradaCaixaVenda(id, venda.valorTotal, venda.formaPagamento, venda.dataVenda);
+    }
 
     // Diminuir estoque
     setProdutos(prev => prev.map(p => {
@@ -790,20 +817,31 @@ export function useDados() {
 
   const removerVenda = (id: string) => {
     setVendas(prev => prev.filter(v => v.id !== id));
+    setMovimentacoes(prev => prev.filter(m => m.vendaId !== id));
   };
 
   const getVendaById = (id: string) => vendas.find(v => v.id === id);
 
   const registrarPagamento = (vendaId: string, valor: number, data: string, observacao?: string) => {
+    if (valor <= 0) return;
+
+    const ctx: { forma?: FormaPagamento; entrada: number } = { entrada: 0 };
 
     setVendas(prev => prev.map(v => {
       if (v.id !== vendaId) return v;
 
+      const pendente = v.pagamento.valorTotal - v.pagamento.valorRecebido;
+      if (pendente < 0.01) return v;
+
+      const aplicado = Math.min(valor, pendente);
+      ctx.forma = v.formaPagamento;
+      ctx.entrada = aplicado;
+
       const novoPagamento = { ...v.pagamento };
 
-      const novoLancamento = { id: gerarId(), valor, data, observacao };
+      const novoLancamento = { id: gerarId(), valor: aplicado, data, observacao };
       novoPagamento.lancamentos = [...(novoPagamento.lancamentos || []), novoLancamento];
-      novoPagamento.valorRecebido += valor;
+      novoPagamento.valorRecebido += aplicado;
 
       if (novoPagamento.valorRecebido >= novoPagamento.valorTotal - 0.01) {
         novoPagamento.status = 'pago';
@@ -830,6 +868,10 @@ export function useDados() {
         dataPagamento: novoPagamento.status === 'pago' ? data : v.dataPagamento
       };
     }));
+
+    if (ctx.forma && ctx.entrada > 0) {
+      pushEntradaCaixaVenda(vendaId, ctx.entrada, ctx.forma, data);
+    }
   };
 
   const getContasAReceber = () => {

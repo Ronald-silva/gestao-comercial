@@ -3,7 +3,7 @@ import { FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import type { Produto, Venda } from '@/types';
-import { formatarData } from '@/lib/utils';
+import { formatarData, cogsDoItem, custoUnitarioDoItem } from '@/lib/utils';
 import { useDados } from '@/hooks/useDados';
 import {
   AlertDialog,
@@ -46,8 +46,8 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
         if (!v.itens || v.itens.length === 0) return [];
 
         return v.itens.map(item => {
-          const produto = produtos.find(p => p.id === item.produtoId);
-          const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+          const cu = custoUnitarioDoItem(item, produtos);
+          const lucro = (item.precoUnitario - cu) * item.quantidade;
           return {
             'Data': formatarData(v.dataVenda),
             'Recibo': v.id.substring(0, 8),
@@ -57,7 +57,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
             'Quantidade': item.quantidade,
             'Preço Unitário': item.precoUnitario,
             'Valor Item': item.quantidade * item.precoUnitario,
-            'Custo Total': produto ? produto.precoCusto * item.quantidade : 0,
+            'Custo Total': cogsDoItem(item, produtos),
             'Lucro': lucro,
             'Margem (%)': item.precoUnitario > 0 ? ((lucro / (item.quantidade * item.precoUnitario)) * 100).toFixed(2) : 0,
             'Forma de Pagamento': v.formaPagamento,
@@ -71,10 +71,7 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       const totalVendas = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.valorTotal, 0);
       const totalRecebido = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => sum + v.pagamento.valorRecebido, 0);
       const totalCusto = vendas.filter(v => v.status !== 'cancelada').reduce((sum, v) => {
-        return sum + (v.itens?.reduce((sumItem, item) => {
-          const produto = produtos.find(p => p.id === item.produtoId);
-          return sumItem + (produto ? produto.precoCusto * item.quantidade : 0);
-        }, 0) || 0);
+        return sum + (v.itens?.reduce((sumItem, item) => sumItem + cogsDoItem(item, produtos), 0) || 0);
       }, 0);
       const totalLucro = totalVendas - totalCusto;
 
@@ -135,8 +132,8 @@ export function ExportarDados({ produtos, vendas }: ExportarDadosProps) {
       const rows = vendas.flatMap(v => {
         if (!v.itens) return [];
         return v.itens.map(item => {
-          const produto = produtos.find(p => p.id === item.produtoId);
-          const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+          const cu = custoUnitarioDoItem(item, produtos);
+          const lucro = (item.precoUnitario - cu) * item.quantidade;
           return [
             formatarData(v.dataVenda),
             v.clienteNome,

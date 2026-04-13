@@ -6,7 +6,7 @@ import {
   Package, Users, BarChart2, RefreshCw, Archive, Wallet,
   ChevronRight,
 } from 'lucide-react';
-import { formatarMoeda } from '@/lib/utils';
+import { formatarMoeda, custoUnitarioDoItem } from '@/lib/utils';
 import type { Produto, Venda, CreditoCliente } from '@/types';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
@@ -99,8 +99,8 @@ export function Dashboard({ produtos, vendas, emprestimos, onNavigate }: Dashboa
     const produtoMap: Record<string, { nome: string; lucro: number; qtd: number }> = {};
     vendasConcluidas.forEach(v => {
       v.itens.forEach(item => {
-        const prod = produtos.find(p => p.id === item.produtoId);
-        const lucroItem = prod ? (item.precoUnitario - prod.precoCusto) * item.quantidade : 0;
+        const cu = custoUnitarioDoItem(item, produtos);
+        const lucroItem = (item.precoUnitario - cu) * item.quantidade;
         if (!produtoMap[item.produtoId]) {
           produtoMap[item.produtoId] = { nome: item.produtoNome, lucro: 0, qtd: 0 };
         }

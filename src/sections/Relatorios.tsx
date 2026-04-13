@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Calendar, AlertCircle, Zap } from 'lucide-react';
-import { formatarMoeda, categorias } from '@/lib/utils';
+import { formatarMoeda, categorias, custoUnitarioDoItem, cogsDoItem } from '@/lib/utils';
 import { useDados } from '@/hooks/useDados';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from 'recharts';
 import type { Produto, Venda } from '@/types';
@@ -46,10 +46,7 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
 
     // Lucro
     const totalCusto = vendasFiltradas.reduce((sum, v) => {
-      return sum + (v.itens?.reduce((sumItem, item) => {
-        const produto = produtos.find(p => p.id === item.produtoId);
-        return sumItem + (produto ? produto.precoCusto * item.quantidade : 0);
-      }, 0) || 0);
+      return sum + (v.itens?.reduce((sumItem, item) => sumItem + cogsDoItem(item, produtos), 0) || 0);
     }, 0);
     const totalLucro = totalVendas - totalCusto;
     const margemLucro = totalVendas > 0 ? (totalLucro / totalVendas) * 100 : 0;
@@ -63,8 +60,9 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
       v.itens?.forEach(item => {
         const produto = produtos.find(p => p.id === item.produtoId);
         if (!produto) return;
-        
-        const lucro = (item.precoUnitario - produto.precoCusto) * item.quantidade;
+
+        const cu = custoUnitarioDoItem(item, produtos);
+        const lucro = (item.precoUnitario - cu) * item.quantidade;
         const existente = acc.find(c => c.categoria === produto.categoria);
         
         if (existente) {
@@ -87,8 +85,8 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
     const produtosMaisVendidos = vendasFiltradas.reduce((acc, v) => {
       v.itens?.forEach(item => {
         const existente = acc.find(p => p.produtoId === item.produtoId);
-        const produto = produtos.find(p => p.id === item.produtoId);
-        const lucro = produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0;
+        const cu = custoUnitarioDoItem(item, produtos);
+        const lucro = (item.precoUnitario - cu) * item.quantidade;
         
         if (existente) {
           existente.quantidade += item.quantidade;
@@ -163,8 +161,8 @@ export function Relatorios({ produtos, vendas }: RelatoriosProps) {
       const valorDia = vendasDia.reduce((sum, v) => sum + v.valorTotal, 0);
       const lucroDia = vendasDia.reduce((sum, v) => {
         return sum + (v.itens?.reduce((sumItem, item) => {
-          const produto = produtos.find(p => p.id === item.produtoId);
-          return sumItem + (produto ? (item.precoUnitario - produto.precoCusto) * item.quantidade : 0);
+          const cu = custoUnitarioDoItem(item, produtos);
+          return sumItem + (item.precoUnitario - cu) * item.quantidade;
         }, 0) || 0);
       }, 0);
       

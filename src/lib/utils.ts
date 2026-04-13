@@ -1,5 +1,19 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { ItemVenda, Produto } from '@/types'
+
+/** Custo unitário do item na venda: snapshot (precoCusto no item) ou fallback ao produto atual. */
+export function custoUnitarioDoItem(item: ItemVenda, produtos: Produto[]): number {
+  if (typeof item.precoCusto === 'number' && !Number.isNaN(item.precoCusto)) {
+    return item.precoCusto;
+  }
+  const prod = produtos.find(p => p.id === item.produtoId);
+  return prod?.precoCusto ?? 0;
+}
+
+export function cogsDoItem(item: ItemVenda, produtos: Produto[]): number {
+  return custoUnitarioDoItem(item, produtos) * item.quantidade;
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
